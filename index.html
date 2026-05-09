@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>SEO Intelligence Dashboard</title>
+
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/print.css" />
+
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script defer src="js/data.js"></script>
+  <script defer src="js/charts.js"></script>
+  <script defer src="js/ui.js"></script>
+  <script defer src="js/export.js"></script>
+  <script defer src="js/main.js"></script>
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="logo">
+      <img src="assets/logo.svg" class="logo-mark-img" alt="SEO Intel logo" />
+      <div class="logo-text">SEO Intel</div>
+      <div class="logo-sub">Light Edition</div>
+    </div>
+
+    <div class="nav-section">Analytics</div>
+    <div class="nav-item active">
+      <span>◈</span> Overview
+      <span class="nav-badge">Live</span>
+    </div>
+    <div class="nav-item"><span>◉</span> Performance</div>
+    <div class="nav-item"><span>◎</span> Keywords</div>
+    <div class="nav-item"><span>⬡</span> Rank Tracker</div>
+
+    <div class="nav-section">Insights</div>
+    <div class="nav-item"><span>✦</span> SERP Features</div>
+    <div class="nav-item"><span>◈</span> Competitors</div>
+    <div class="nav-item"><span>⊞</span> Backlinks</div>
+
+    <div class="nav-section">Reports</div>
+    <div class="nav-item"><span>◉</span> GA4 Report</div>
+    <div class="nav-item"><span>◎</span> GSC Report</div>
+    <div class="nav-item"><span>↓</span> Export</div>
+  </aside>
+
+  <main class="main" id="pdf-content">
+    <div class="topbar report-topbar">
+      <div class="report-heading">
+        <div class="page-title">SEO Overview</div>
+        <div class="page-subtitle" id="reportSubtitle">
+          Acme Corp · May 2026 · Powered by DataForSEO
+        </div>
+      </div>
+
+      <div class="report-filter-bar">
+        <div class="filter-field project-field">
+          <label for="projectSelector">Project</label>
+          <select id="projectSelector" class="filter-select">
+            <option value="acme-corp">Acme Corp</option>
+            <option value="techbrand-india">TechBrand India</option>
+            <option value="startupx">StartupX</option>
+            <option value="local-seo-client">Local SEO Client</option>
+          </select>
+
+          <div class="export-field-value export-select-pill" id="exportProjectValue">
+            <span id="exportProjectText">Acme Corp</span>
+            <span class="export-chevron" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="filter-field date-field">
+          <label for="fromDate">From</label>
+          <input type="date" id="fromDate" class="filter-date" value="2026-05-01" />
+
+          <div class="export-field-value export-date-pill" id="exportFromValue">
+            <span id="exportFromText">2026-05-01</span>
+            <span class="export-calendar" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="filter-field date-field">
+          <label for="toDate">To</label>
+          <input type="date" id="toDate" class="filter-date" value="2026-05-08" />
+
+          <div class="export-field-value export-date-pill" id="exportToValue">
+            <span id="exportToText">2026-05-08</span>
+            <span class="export-calendar" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <button class="btn-export" id="exportBtn" type="button">
+          <span class="export-arrow" aria-hidden="true"></span>
+          <span>Export PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <section class="kpi-grid">
+      <div class="kpi-card" style="--card-color:#ff6b35;">
+        <div class="kpi-glow"></div>
+        <div class="kpi-top">
+          <div class="kpi-label">Organic Sessions</div>
+          <div class="kpi-dot"></div>
+        </div>
+        <div class="kpi-value" data-kpi="organicSessions">0</div>
+        <div class="kpi-change up" data-kpi-change="organicSessions">▲ 0%</div>
+      </div>
+
+      <div class="kpi-card" style="--card-color:#a8ff3e;">
+        <div class="kpi-glow"></div>
+        <div class="kpi-top">
+          <div class="kpi-label">GSC Clicks</div>
+          <div class="kpi-dot"></div>
+        </div>
+        <div class="kpi-value" data-kpi="gscClicks">0</div>
+        <div class="kpi-change up" data-kpi-change="gscClicks">▲ 0%</div>
+      </div>
+
+      <div class="kpi-card" style="--card-color:#ffb830;">
+        <div class="kpi-glow"></div>
+        <div class="kpi-top">
+          <div class="kpi-label">Avg. Position</div>
+          <div class="kpi-dot"></div>
+        </div>
+        <div class="kpi-value" data-kpi="avgPosition">0</div>
+        <div class="kpi-change up" data-kpi-change="avgPosition">▲ 0 pos</div>
+      </div>
+
+      <div class="kpi-card" style="--card-color:#ff4d8d;">
+        <div class="kpi-glow"></div>
+        <div class="kpi-top">
+          <div class="kpi-label">Bounce Rate</div>
+          <div class="kpi-dot"></div>
+        </div>
+        <div class="kpi-value" data-kpi="bounceRate">0%</div>
+        <div class="kpi-change down" data-kpi-change="bounceRate">▼ 0%</div>
+      </div>
+    </section>
+
+    <section class="charts-row charts-row-2">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Organic Sessions Over Time</div>
+            <div class="chart-subtitle">This period vs previous · GA4</div>
+          </div>
+          <span class="tag tag-teal">● Live</span>
+        </div>
+        <canvas id="sessChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Device Split</div>
+            <div class="chart-subtitle">Sessions by device · GA4</div>
+          </div>
+          <span class="tag tag-sky">GA4</span>
+        </div>
+        <canvas id="devChart"></canvas>
+        <div class="metric-list" id="deviceBars"></div>
+      </div>
+    </section>
+
+    <section class="charts-row charts-row-2">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Keyword Rank Tracker</div>
+            <div class="chart-subtitle">Top keywords · DataForSEO · India · Desktop</div>
+          </div>
+          <span class="tag tag-amber">DataForSEO</span>
+        </div>
+
+        <div class="table-scroll">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>Pos</th>
+                <th>Keyword</th>
+                <th>URL</th>
+                <th>Δ</th>
+                <th>Vol</th>
+              </tr>
+            </thead>
+            <tbody id="rankTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Traffic by Channel</div>
+            <div class="chart-subtitle">Acquisition sources · GA4</div>
+          </div>
+          <span class="tag tag-sky">GA4</span>
+        </div>
+        <canvas id="chanChart"></canvas>
+      </div>
+    </section>
+
+    <section class="charts-row charts-row-3">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Impressions vs Clicks</div>
+            <div class="chart-subtitle">Google Search Console</div>
+          </div>
+          <span class="tag tag-teal">GSC</span>
+        </div>
+        <canvas id="impChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">SERP Features</div>
+            <div class="chart-subtitle">Triggered by tracked keywords</div>
+          </div>
+          <span class="tag tag-violet">DFS</span>
+        </div>
+        <canvas id="serpChart"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Top Countries</div>
+            <div class="chart-subtitle">Sessions by geography · GA4</div>
+          </div>
+          <span class="tag tag-sky">GA4</span>
+        </div>
+        <div class="metric-list" id="countryBars"></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
