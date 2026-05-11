@@ -5,7 +5,7 @@ const REPORT_CONFIG = {
     Example:
     n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report'
   */
-  n8nWebhookUrl: ''
+  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report'
 };
 
 const DEMO_REPORT_DATA = {
@@ -118,7 +118,8 @@ function getClientName(clientId) {
     'acme-corp': 'Acme Corp',
     'techbrand-india': 'TechBrand India',
     'startupx': 'StartupX',
-    'local-seo-client': 'Local SEO Client'
+    'local-seo-client': 'Local SEO Client',
+    'repute': 'Repute'
   };
 
   return names[clientId] || clientId;
