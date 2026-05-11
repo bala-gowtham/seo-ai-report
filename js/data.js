@@ -3,7 +3,7 @@ const REPORT_CONFIG = {
     Add your n8n webhook later.
 
     Example:
-    n8nWebhookUrl: 'https://your-n8n-domain.com/webhook/seo-report'
+    n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report'
   */
   n8nWebhookUrl: ''
 };
