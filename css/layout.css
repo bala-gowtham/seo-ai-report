@@ -311,6 +311,15 @@ body::before {
   position: relative;
   overflow: hidden;
   min-width: 0;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.kpi-card:hover {
+  border-color: var(--card-color, var(--accent-teal));
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04);
 }
 
 .kpi-glow {
@@ -322,6 +331,12 @@ body::before {
   border-radius: 50%;
   background: var(--card-color, var(--accent-teal));
   opacity: 0.05;
+  transition: all 0.4s ease;
+}
+
+.kpi-card:hover .kpi-glow {
+  opacity: 0.12;
+  transform: scale(1.5);
 }
 
 .kpi-top {
@@ -346,6 +361,12 @@ body::before {
   background: var(--card-color, var(--accent-teal));
   box-shadow: 0 0 8px var(--card-color, var(--accent-teal));
   margin-top: 2px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.kpi-card:hover .kpi-dot {
+  transform: scale(1.15);
+  box-shadow: 0 0 14px var(--card-color, var(--accent-teal));
 }
 
 .kpi-value {
