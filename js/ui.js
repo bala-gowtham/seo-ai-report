@@ -24,6 +24,7 @@ function initReportControls() {
   ];
 
   controls.forEach(control => {
+    if (!control) return;
     control.addEventListener('change', reloadReport);
   });
 }
@@ -41,42 +42,60 @@ function renderDashboard(report) {
 function renderMeta(report) {
   const subtitle = document.getElementById('reportSubtitle');
 
-  subtitle.textContent =
-    `${report.meta.clientName} · ${report.meta.monthLabel} · ${report.meta.sourceLabel}`;
+  if (subtitle) {
+    subtitle.textContent =
+      `${report.meta.clientName} · ${report.meta.monthLabel} · ${report.meta.sourceLabel}`;
+  }
 
-  document.getElementById('projectSelector').value = report.meta.clientId;
-  document.getElementById('fromDate').value = report.meta.from;
-  document.getElementById('toDate').value = report.meta.to;
+  const projectSelector = document.getElementById('projectSelector');
+  const fromDate = document.getElementById('fromDate');
+  const toDate = document.getElementById('toDate');
+
+  if (projectSelector) projectSelector.value = report.meta.clientId;
+  if (fromDate) fromDate.value = report.meta.from;
+  if (toDate) toDate.value = report.meta.to;
 }
 
 function renderKpis(report) {
-  setKpi('organicSessions', report.kpis.organicSessions);
-  setKpi('gscClicks', report.kpis.gscClicks);
-  setKpi('avgPosition', report.kpis.avgPosition);
-  setKpi('bounceRate', report.kpis.bounceRate);
+  const kpis = report.kpis || {};
+
+  setKpi('totalSessions', kpis.totalSessions);
+  setKpi('organicSessions', kpis.organicSessions);
+  setKpi('gscClicks', kpis.gscClicks);
+  setKpi('gscImpressions', kpis.gscImpressions);
+  setKpi('avgCtr', kpis.avgCtr);
+  setKpi('avgPosition', kpis.avgPosition);
+  setKpi('bounceRate', kpis.bounceRate);
+  setKpi('conversions', kpis.conversions);
 }
 
 function setKpi(key, item) {
   const valueEl = document.querySelector(`[data-kpi="${key}"]`);
   const changeEl = document.querySelector(`[data-kpi-change="${key}"]`);
 
+  if (!valueEl || !changeEl || !item) return;
+
   valueEl.textContent = formatValue(item.value) + (item.suffix || '');
 
-  const isDown = Number(item.change) < 0;
-  const arrow = isDown ? '▼' : '▲';
-  const cleanChange = Math.abs(item.change);
+  const change = Number(item.change || 0);
+  const betterWhenDown = item.betterWhenDown === true;
+  const isImproved = betterWhenDown ? change <= 0 : change >= 0;
+  const arrow = isImproved ? '▲' : '▼';
+  const cleanChange = Math.abs(change);
   const suffix = item.changeSuffix || '%';
 
-  changeEl.textContent = `${arrow} ${cleanChange}${suffix}`;
-  changeEl.classList.toggle('down', isDown);
-  changeEl.classList.toggle('up', !isDown);
+  changeEl.textContent = `${arrow} ${formatValue(cleanChange)}${suffix}`;
+  changeEl.classList.toggle('up', isImproved);
+  changeEl.classList.toggle('down', !isImproved);
 }
 
 function renderRankTable(items) {
   const body = document.getElementById('rankTableBody');
+  if (!body) return;
+
   body.innerHTML = '';
 
-  items.forEach(item => {
+  (items || []).forEach(item => {
     const tr = document.createElement('tr');
 
     tr.innerHTML = `
@@ -93,21 +112,24 @@ function renderRankTable(items) {
 
 function renderMetricBars(containerId, items, colors) {
   const container = document.getElementById(containerId);
+  if (!container) return;
+
   container.innerHTML = '';
 
-  items.forEach((item, index) => {
+  (items || []).forEach((item, index) => {
     const row = document.createElement('div');
     row.className = 'mrow';
 
     const color = colors[index] || '#ff6b35';
     const label = item.icon ? `${item.icon} ${item.name}` : item.name;
+    const value = Number(item.value) || 0;
 
     row.innerHTML = `
       <span class="mname">${escapeHtml(label)}</span>
       <div class="mbar">
-        <div class="mfill" style="width:${Number(item.value)}%;background:${color};"></div>
+        <div class="mfill" style="width:${value}%;background:${color};"></div>
       </div>
-      <span class="mval">${Number(item.value)}%</span>
+      <span class="mval">${value}%</span>
     `;
 
     container.appendChild(row);
@@ -157,7 +179,7 @@ function formatChange(change) {
 }
 
 function formatValue(value) {
-  if (typeof value !== 'number') return value;
+  if (typeof value !== 'number' || Number.isNaN(value)) return value;
 
   if (Number.isInteger(value)) {
     return value.toLocaleString();
@@ -167,7 +189,7 @@ function formatValue(value) {
 }
 
 function escapeHtml(value) {
-  return value
+  return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
