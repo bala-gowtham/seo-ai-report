@@ -67,6 +67,8 @@ const DEMO_REPORT_DATA = {
     clientName: 'Acme Corp',
     from: '2026-05-01',
     to: '2026-05-08',
+    prevFrom: '2026-04-23',
+    prevTo: '2026-04-30',
     monthLabel: 'May 2026',
     sourceLabel: 'GA4 · GSC · DataForSEO'
   },
@@ -164,10 +166,6 @@ function normalizeReportData(report, params = {}) {
       ...fallback.meta,
       ...(incoming.meta || {})
     },
-    kpis: {
-      ...fallback.kpis,
-      ...(incoming.kpis || {})
-    },
     sessionsOverTime: {
       ...fallback.sessionsOverTime,
       ...(incoming.sessionsOverTime || {})
@@ -199,12 +197,28 @@ function normalizeReportData(report, params = {}) {
   data.meta.monthLabel = formatMonthFromDate(data.meta.from);
   data.meta.sourceLabel = data.meta.sourceLabel || 'GA4 · GSC · DataForSEO';
 
-  data.kpis = {
-    ...DEFAULT_KPIS,
-    ...data.kpis
-  };
+  data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
 
   return data;
+}
+
+function mergeKpis(defaultKpis, incomingKpis) {
+  const merged = {};
+
+  Object.keys(defaultKpis).forEach(key => {
+    merged[key] = {
+      ...defaultKpis[key],
+      ...((incomingKpis && incomingKpis[key]) || {})
+    };
+  });
+
+  Object.keys(incomingKpis || {}).forEach(key => {
+    if (!merged[key]) {
+      merged[key] = { ...incomingKpis[key] };
+    }
+  });
+
+  return merged;
 }
 
 function getClientName(clientId) {
