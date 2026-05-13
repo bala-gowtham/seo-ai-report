@@ -98,8 +98,15 @@ function renderRankTable(items) {
   (items || []).forEach(item => {
     const tr = document.createElement('tr');
 
+    const hasPosition =
+      item.position !== null &&
+      item.position !== undefined &&
+      item.position !== '';
+
+    const positionText = hasPosition ? `#${item.position}` : 'Not found';
+
     tr.innerHTML = `
-      <td><span class="rank-pill ${getRankClass(item.position)}">#${item.position}</span></td>
+      <td><span class="rank-pill ${getRankClass(item.position)}">${escapeHtml(positionText)}</span></td>
       <td class="kw">${escapeHtml(item.keyword)}</td>
       <td class="url-cell">${escapeHtml(item.url)}</td>
       <td class="${getChangeClass(item.change)}">${formatChange(item.change)}</td>
@@ -160,6 +167,7 @@ function syncExportControls() {
 }
 
 function getRankClass(position) {
+  if (!position || Number(position) <= 0) return 'rout';
   if (position <= 1) return 'r1';
   if (position <= 5) return 'r3';
   if (position <= 10) return 'r10';
