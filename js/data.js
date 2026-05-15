@@ -71,6 +71,7 @@ const DEMO_REPORT_DATA = {
     sourceLabel: 'GA4 · GSC · Stored Search Data',
     latestRefreshId: null,
     latestRefreshStatus: null,
+    latestRefreshCompletedAt: null,
     latestRefreshNotes: null
   },
   kpis: { ...DEFAULT_KPIS },
@@ -198,6 +199,7 @@ function normalizeReportData(report, params = {}) {
   // Preserve new meta fields from live webhook
   data.meta.latestRefreshId = incoming.meta?.latestRefreshId ?? data.meta.latestRefreshId ?? null;
   data.meta.latestRefreshStatus = incoming.meta?.latestRefreshStatus ?? data.meta.latestRefreshStatus ?? null;
+  data.meta.latestRefreshCompletedAt = incoming.meta?.latestRefreshCompletedAt ?? data.meta.latestRefreshCompletedAt ?? null;
   data.meta.latestRefreshNotes = incoming.meta?.latestRefreshNotes ?? data.meta.latestRefreshNotes ?? null;
 
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
