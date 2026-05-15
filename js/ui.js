@@ -54,6 +54,26 @@ function renderMeta(report) {
   if (projectSelector) projectSelector.value = report.meta.clientId;
   if (fromDate) fromDate.value = report.meta.from;
   if (toDate) toDate.value = report.meta.to;
+
+  // Render latestRefresh status badge if present
+  const refreshBadge = document.getElementById('latestRefreshBadge');
+  if (refreshBadge) {
+    const status = report.meta.latestRefreshStatus;
+    const id = report.meta.latestRefreshId;
+    const notes = report.meta.latestRefreshNotes;
+
+    if (status) {
+      const badgeClass = status === 'success' ? 'badge-success'
+        : status === 'partial' ? 'badge-warning'
+        : 'badge-error';
+      refreshBadge.innerHTML = `
+        <span class="refresh-badge ${badgeClass}" title="${escapeHtml(notes || '')}">Refresh: ${escapeHtml(status)}${id ? ` · #${escapeHtml(String(id))}` : ''}</span>
+      `;
+      refreshBadge.style.display = '';
+    } else {
+      refreshBadge.style.display = 'none';
+    }
+  }
 }
 
 function renderKpis(report) {
@@ -105,12 +125,19 @@ function renderRankTable(items) {
 
     const positionText = hasPosition ? `#${item.position}` : 'Not found';
 
+    // Support new title + domain fields; fall back to keyword + url
+    const displayTitle = item.title || item.keyword || '';
+    const displayDomain = item.domain || item.url || '';
+
     tr.innerHTML = `
       <td><span class="rank-pill ${getRankClass(item.position)}">${escapeHtml(positionText)}</span></td>
-      <td class="kw">${escapeHtml(item.keyword)}</td>
-      <td class="url-cell">${escapeHtml(item.url)}</td>
+      <td class="kw">
+        <div class="kw-title">${escapeHtml(displayTitle)}</div>
+        ${item.keyword && item.title ? `<div class="kw-query">${escapeHtml(item.keyword)}</div>` : ''}
+      </td>
+      <td class="url-cell">${escapeHtml(displayDomain)}</td>
       <td class="${getChangeClass(item.change)}">${formatChange(item.change)}</td>
-      <td>${escapeHtml(String(item.volume))}</td>
+      <td>${escapeHtml(String(item.volume ?? '—'))}</td>
     `;
 
     body.appendChild(tr);

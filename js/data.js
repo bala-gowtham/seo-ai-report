@@ -1,11 +1,9 @@
 const REPORT_CONFIG = {
   /*
-    Add your n8n webhook later.
-
-    Example:
-    n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report'
+    Webhook path updated to sheets-config version.
+    Change to /webhook/seo-report-sheets-test for test or production path when ready.
   */
-  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report'
+  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook-test/seo-report-sheets-test'
 };
 
 const DEFAULT_KPIS = {
@@ -70,7 +68,10 @@ const DEMO_REPORT_DATA = {
     prevFrom: '2026-04-23',
     prevTo: '2026-04-30',
     monthLabel: 'May 2026',
-    sourceLabel: 'GA4 · GSC · DataForSEO'
+    sourceLabel: 'GA4 · GSC · Stored Search Data',
+    latestRefreshId: null,
+    latestRefreshStatus: null,
+    latestRefreshNotes: null
   },
   kpis: { ...DEFAULT_KPIS },
   sessionsOverTime: {
@@ -84,12 +85,9 @@ const DEMO_REPORT_DATA = {
     { name: 'Tablet', icon: '📟', value: 6 }
   ],
   rankTracker: [
-    { position: 1, keyword: 'seo agency india', url: '/services/seo', change: 3, volume: '8.2k' },
-    { position: 3, keyword: 'digital marketing coimbatore', url: '/locations/cbtr', change: 1, volume: '2.9k' },
-    { position: 5, keyword: 'seo reporting automation', url: '/blog/seo-auto', change: 0, volume: '1.6k' },
-    { position: 7, keyword: 'best seo tools 2026', url: '/blog/seo-tools', change: -2, volume: '12.4k' },
-    { position: 9, keyword: 'google search console tips', url: '/blog/gsc-tips', change: 4, volume: '5.1k' },
-    { position: 14, keyword: 'n8n seo automation', url: '/blog/n8n-seo', change: 7, volume: '880' }
+    { position: 1, keyword: 'seo agency india', title: 'SEO Agency India', domain: 'example.in', url: '/services/seo', change: 3, volume: '8.2k' },
+    { position: 3, keyword: 'digital marketing coimbatore', title: 'Digital Marketing Coimbatore', domain: 'example.in', url: '/locations/cbtr', change: 1, volume: '2.9k' },
+    { position: 5, keyword: 'seo reporting automation', title: 'SEO Reporting Automation', domain: 'example.in', url: '/blog/seo-auto', change: 0, volume: '1.6k' }
   ],
   trafficByChannel: [
     { name: 'Organic', value: 12400 },
@@ -195,7 +193,12 @@ function normalizeReportData(report, params = {}) {
   }
 
   data.meta.monthLabel = formatMonthFromDate(data.meta.from);
-  data.meta.sourceLabel = data.meta.sourceLabel || 'GA4 · GSC · DataForSEO';
+  data.meta.sourceLabel = data.meta.sourceLabel || 'GA4 · GSC · Stored Search Data';
+
+  // Preserve new meta fields from live webhook
+  data.meta.latestRefreshId = incoming.meta?.latestRefreshId ?? data.meta.latestRefreshId ?? null;
+  data.meta.latestRefreshStatus = incoming.meta?.latestRefreshStatus ?? data.meta.latestRefreshStatus ?? null;
+  data.meta.latestRefreshNotes = incoming.meta?.latestRefreshNotes ?? data.meta.latestRefreshNotes ?? null;
 
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
 
