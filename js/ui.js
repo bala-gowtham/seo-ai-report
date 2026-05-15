@@ -63,9 +63,12 @@ function renderMeta(report) {
     const notes = report.meta.latestRefreshNotes;
 
     if (status) {
-      const badgeClass = status === 'success' ? 'badge-success'
-        : status === 'partial' ? 'badge-warning'
-        : 'badge-error';
+      const badgeClass =
+        (status === 'success' || status === 'completed')
+          ? 'badge-success'
+          : status === 'partial'
+            ? 'badge-warning'
+            : 'badge-error';
       refreshBadge.innerHTML = `
         <span class="refresh-badge ${badgeClass}" title="${escapeHtml(notes || '')}">Refresh: ${escapeHtml(status)}${id ? ` · #${escapeHtml(String(id))}` : ''}</span>
       `;
