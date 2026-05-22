@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <title>SEO Intelligence Dashboard</title>
+  <title>SEO Overview Dashboard</title>
 
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/print.css" />
@@ -23,29 +23,27 @@
 <body>
   <aside class="sidebar">
     <div class="logo">
-      <img src="assets/logo.png" class="logo-mark-img" alt="SEO Intel logo" />
+      <svg class="logo-mark-svg" viewBox="0 0 34 34" fill="none" aria-label="SEO Intel" xmlns="http://www.w3.org/2000/svg">
+        <rect width="34" height="34" rx="8" fill="#ff6b35"/>
+        <path d="M8 17 Q17 8 26 17 Q17 26 8 17Z" fill="white" opacity="0.9"/>
+        <circle cx="17" cy="17" r="4" fill="#ff6b35"/>
+      </svg>
       <div class="logo-text">SEO Intel</div>
-      <div class="logo-sub">Light Edition</div>
+      <div class="logo-sub">Overview</div>
     </div>
 
     <div class="nav-section">Analytics</div>
     <div class="nav-item active">
-      <span>◈</span> Overview
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Overview
       <span class="nav-badge">Live</span>
     </div>
-    <div class="nav-item"><span>◉</span> Performance</div>
-    <div class="nav-item"><span>◎</span> Keywords</div>
-    <div class="nav-item"><span>⬡</span> Rank Tracker</div>
-
-    <div class="nav-section">Insights</div>
-    <div class="nav-item"><span>✦</span> SERP Features</div>
-    <div class="nav-item"><span>◈</span> Competitors</div>
-    <div class="nav-item"><span>⊞</span> Backlinks</div>
 
     <div class="nav-section">Reports</div>
-    <div class="nav-item"><span>◉</span> GA4 Report</div>
-    <div class="nav-item"><span>◎</span> GSC Report</div>
-    <div class="nav-item"><span>↓</span> Export</div>
+    <div class="nav-item">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </div>
   </aside>
 
   <main class="main" id="pdf-content">
@@ -53,9 +51,8 @@
       <div class="report-heading">
         <div class="page-title">SEO Overview</div>
         <div class="page-subtitle" id="reportSubtitle">
-          Acme Corp · May 2026 · GA4 · GSC · Stored Search Data
+          Repute · May 2026 · GA4 · GSC · AEO Signals
         </div>
-        <div id="latestRefreshBadge" style="display:none;"></div>
       </div>
 
       <div class="report-filter-bar">
@@ -75,25 +72,16 @@
           </div>
         </div>
 
-        <div class="filter-field date-field">
-          <label for="fromDate">From</label>
-          <input type="date" id="fromDate" class="filter-date" value="2026-05-01" />
+        <div class="filter-field month-field">
+          <label for="monthSelector">Month</label>
+          <input type="month" id="monthSelector" class="filter-month" value="2026-05" />
 
-          <div class="export-field-value export-date-pill" id="exportFromValue">
-            <span id="exportFromText">2026-05-01</span>
-            <span class="export-calendar" aria-hidden="true"></span>
+          <div class="export-field-value export-month-pill" id="exportMonthValue">
+            <span id="exportMonthText">May 2026</span>
           </div>
         </div>
 
-        <div class="filter-field date-field">
-          <label for="toDate">To</label>
-          <input type="date" id="toDate" class="filter-date" value="2026-05-08" />
-
-          <div class="export-field-value export-date-pill" id="exportToValue">
-            <span id="exportToText">2026-05-08</span>
-            <span class="export-calendar" aria-hidden="true"></span>
-          </div>
-        </div>
+        <button class="btn-submit" id="submitReportBtn" type="button">Generate Report</button>
 
         <button class="btn-export" id="exportBtn" type="button">
           <span class="export-arrow" aria-hidden="true"></span>
@@ -102,15 +90,27 @@
       </div>
     </div>
 
-    <section class="kpi-grid">
+    <!-- Loading / Error states -->
+    <div id="loadingState" class="loading-state" style="display:none;">
+      <div class="loading-spinner"></div>
+      <p>Fetching report data&hellip;</p>
+    </div>
+
+    <div id="errorState" class="error-state" style="display:none;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p id="errorMessage">Failed to load report. Using demo data.</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <section class="kpi-grid" id="dashboardContent">
       <div class="kpi-card" style="--card-color:#ff6b35;">
         <div class="kpi-glow"></div>
         <div class="kpi-top">
           <div class="kpi-label">Total Sessions</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="totalSessions">0</div>
-        <div class="kpi-change up" data-kpi-change="totalSessions">▲ 0%</div>
+        <div class="kpi-value" data-kpi="totalSessions">—</div>
+        <div class="kpi-change" data-kpi-change="totalSessions">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#ff9a6b;">
@@ -119,8 +119,8 @@
           <div class="kpi-label">Organic Sessions</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="organicSessions">0</div>
-        <div class="kpi-change up" data-kpi-change="organicSessions">▲ 0%</div>
+        <div class="kpi-value" data-kpi="organicSessions">—</div>
+        <div class="kpi-change" data-kpi-change="organicSessions">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#a8ff3e;">
@@ -129,8 +129,8 @@
           <div class="kpi-label">GSC Clicks</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="gscClicks">0</div>
-        <div class="kpi-change up" data-kpi-change="gscClicks">▲ 0%</div>
+        <div class="kpi-value" data-kpi="gscClicks">—</div>
+        <div class="kpi-change" data-kpi-change="gscClicks">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#3b82f6;">
@@ -139,8 +139,8 @@
           <div class="kpi-label">GSC Impressions</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="gscImpressions">0</div>
-        <div class="kpi-change up" data-kpi-change="gscImpressions">▲ 0%</div>
+        <div class="kpi-value" data-kpi="gscImpressions">—</div>
+        <div class="kpi-change" data-kpi-change="gscImpressions">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#8b5cf6;">
@@ -149,8 +149,8 @@
           <div class="kpi-label">Avg. CTR</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="avgCtr">0%</div>
-        <div class="kpi-change up" data-kpi-change="avgCtr">▲ 0 pp</div>
+        <div class="kpi-value" data-kpi="avgCtr">—</div>
+        <div class="kpi-change" data-kpi-change="avgCtr">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#ffb830;">
@@ -159,31 +159,32 @@
           <div class="kpi-label">Avg. Position</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="avgPosition">0</div>
-        <div class="kpi-change up" data-kpi-change="avgPosition">▲ 0 pos</div>
-      </div>
-
-      <div class="kpi-card" style="--card-color:#ff4d8d;">
-        <div class="kpi-glow"></div>
-        <div class="kpi-top">
-          <div class="kpi-label">Bounce Rate</div>
-          <div class="kpi-dot"></div>
-        </div>
-        <div class="kpi-value" data-kpi="bounceRate">0%</div>
-        <div class="kpi-change down" data-kpi-change="bounceRate">▼ 0 pp</div>
+        <div class="kpi-value" data-kpi="avgPosition">—</div>
+        <div class="kpi-change" data-kpi-change="avgPosition">—</div>
       </div>
 
       <div class="kpi-card" style="--card-color:#14b8a6;">
         <div class="kpi-glow"></div>
         <div class="kpi-top">
+          <div class="kpi-label">Engagement Rate</div>
+          <div class="kpi-dot"></div>
+        </div>
+        <div class="kpi-value" data-kpi="engagementRate">—</div>
+        <div class="kpi-change" data-kpi-change="engagementRate">—</div>
+      </div>
+
+      <div class="kpi-card" style="--card-color:#ff4d8d;">
+        <div class="kpi-glow"></div>
+        <div class="kpi-top">
           <div class="kpi-label">Conversions</div>
           <div class="kpi-dot"></div>
         </div>
-        <div class="kpi-value" data-kpi="conversions">0</div>
-        <div class="kpi-change up" data-kpi-change="conversions">▲ 0%</div>
+        <div class="kpi-value" data-kpi="conversions">—</div>
+        <div class="kpi-change" data-kpi-change="conversions">—</div>
       </div>
     </section>
 
+    <!-- Row 1: Sessions Over Time + Device Split -->
     <section class="charts-row charts-row-2">
       <div class="chart-card">
         <div class="chart-header">
@@ -191,7 +192,7 @@
             <div class="chart-title">Sessions Over Time</div>
             <div class="chart-subtitle">This period vs previous · GA4</div>
           </div>
-          <span class="tag tag-teal">● Live</span>
+          <span class="tag tag-teal">GA4</span>
         </div>
         <canvas id="sessChart"></canvas>
       </div>
@@ -209,30 +210,17 @@
       </div>
     </section>
 
+    <!-- Row 2: Traffic by Channel + GSC Clicks vs Impressions -->
     <section class="charts-row charts-row-2">
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <div class="chart-title">Keyword Rank Tracker</div>
-            <div class="chart-subtitle">Top keywords · DataForSEO · India · Desktop</div>
+            <div class="chart-title">GSC Clicks vs Impressions</div>
+            <div class="chart-subtitle">Google Search Console · trend</div>
           </div>
-          <span class="tag tag-amber">DataForSEO</span>
+          <span class="tag tag-teal">GSC</span>
         </div>
-
-        <div class="table-scroll">
-          <table class="rank-table">
-            <thead>
-              <tr>
-                <th>Pos</th>
-                <th>Keyword</th>
-                <th>URL</th>
-                <th>Δ</th>
-                <th>Vol</th>
-              </tr>
-            </thead>
-            <tbody id="rankTableBody"></tbody>
-          </table>
-        </div>
+        <canvas id="impChart"></canvas>
       </div>
 
       <div class="chart-card">
@@ -247,27 +235,59 @@
       </div>
     </section>
 
-    <section class="charts-row charts-row-3">
+    <!-- Row 3: GSC Keyword Performance -->
+    <section class="charts-row">
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <div class="chart-title">Impressions vs Clicks</div>
-            <div class="chart-subtitle">Google Search Console</div>
+            <div class="chart-title">GSC Keyword Performance</div>
+            <div class="chart-subtitle">Top queries by clicks · Google Search Console</div>
           </div>
           <span class="tag tag-teal">GSC</span>
         </div>
-        <canvas id="impChart"></canvas>
+        <div class="table-scroll">
+          <table class="data-table gsc-table">
+            <thead>
+              <tr>
+                <th>Query</th>
+                <th>Clicks</th>
+                <th>Impressions</th>
+                <th>CTR</th>
+                <th>Avg Pos</th>
+              </tr>
+            </thead>
+            <tbody id="gscKeywordTableBody"></tbody>
+          </table>
+        </div>
       </div>
+    </section>
 
+    <!-- Row 4: AEO Traffic Sources + Top Countries -->
+    <section class="charts-row charts-row-2">
       <div class="chart-card">
         <div class="chart-header">
           <div>
-            <div class="chart-title">SERP Features</div>
-            <div class="chart-subtitle">Triggered by tracked keywords</div>
+            <div class="chart-title">AEO Traffic Sources</div>
+            <div class="chart-subtitle">AI referral traffic · GA4 session source</div>
           </div>
-          <span class="tag tag-violet">DFS</span>
+          <span class="tag tag-violet">AEO</span>
         </div>
-        <canvas id="serpChart"></canvas>
+        <canvas id="aeoChart"></canvas>
+        <div class="table-scroll" id="aeoTableWrap" style="margin-top:14px;display:none;">
+          <table class="data-table aeo-table">
+            <thead>
+              <tr>
+                <th>Source / Medium</th>
+                <th>Landing Page</th>
+                <th>Sessions</th>
+                <th>Engaged</th>
+                <th>Eng Rate</th>
+                <th>Avg Time</th>
+              </tr>
+            </thead>
+            <tbody id="aeoTableBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="chart-card">

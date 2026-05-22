@@ -1,33 +1,30 @@
 let chartInstances = {};
 
 const chartColors = {
-  orange: '#ff6b35',
+  orange:      '#ff6b35',
   lightOrange: '#ff9a6b',
-  amber: '#ffb830',
-  rose: '#ef4444',
-  sky: '#3b82f6',
-  violet: '#8b5cf6',
-  purple: '#c084fc',
-  grid: 'rgba(255,107,53,0.04)',
-  border: 'rgba(0,0,0,0.04)'
+  amber:       '#ffb830',
+  rose:        '#ef4444',
+  sky:         '#3b82f6',
+  violet:      '#8b5cf6',
+  purple:      '#c084fc',
+  teal:        '#14b8a6',
+  grid:        'rgba(255,107,53,0.04)',
+  border:      'rgba(0,0,0,0.04)'
 };
 
 function initChartDefaults() {
   Chart.defaults.color = '#7b8db0';
-  Chart.defaults.font = {
-    family: 'Inter',
-    size: 11
-  };
+  Chart.defaults.font  = { family: 'Inter', size: 11 };
 }
 
 function createCharts() {
   initChartDefaults();
-
   chartInstances.sessions = createSessionsChart();
-  chartInstances.device = createDeviceChart();
-  chartInstances.channel = createChannelChart();
-  chartInstances.gsc = createGscChart();
-  chartInstances.serp = createSerpChart();
+  chartInstances.device   = createDeviceChart();
+  chartInstances.channel  = createChannelChart();
+  chartInstances.gsc      = createGscChart();
+  chartInstances.aeo      = createAeoChart();
 }
 
 function createSessionsChart() {
@@ -166,32 +163,27 @@ function createGscChart() {
         tooltip: tooltipOptions()
       },
       scales: {
-        x: axisOptions(),
-        y: axisOptions(),
-        y1: {
-          position: 'right',
-          grid: { display: false },
-          border: { color: chartColors.border }
-        }
+        x:  axisOptions(),
+        y:  axisOptions(),
+        y1: { position: 'right', grid: { display: false }, border: { color: chartColors.border } }
       }
     }
   });
 }
 
-function createSerpChart() {
-  return new Chart(document.getElementById('serpChart'), {
+function createAeoChart() {
+  return new Chart(document.getElementById('aeoChart'), {
     type: 'doughnut',
     data: {
       labels: [],
       datasets: [{
         data: [],
         backgroundColor: [
+          chartColors.violet,
           chartColors.orange,
           chartColors.purple,
           chartColors.lightOrange,
-          chartColors.amber,
-          chartColors.rose,
-          chartColors.sky
+          chartColors.teal
         ],
         borderWidth: 0,
         hoverOffset: 6
@@ -204,12 +196,7 @@ function createSerpChart() {
       plugins: {
         legend: {
           position: 'bottom',
-          labels: {
-            boxWidth: 8,
-            boxHeight: 8,
-            padding: 8,
-            font: { size: 10 }
-          }
+          labels: { boxWidth: 8, boxHeight: 8, padding: 8, font: { size: 10 } }
         },
         tooltip: tooltipOptions()
       }
@@ -223,12 +210,12 @@ function renderCharts(report) {
   chartInstances.sessions.data.datasets[1].data = report.sessionsOverTime.previous;
   chartInstances.sessions.update();
 
-  chartInstances.device.data.labels = report.deviceSplit.map(item => item.name);
-  chartInstances.device.data.datasets[0].data = report.deviceSplit.map(item => item.value);
+  chartInstances.device.data.labels = report.deviceSplit.map(i => i.name);
+  chartInstances.device.data.datasets[0].data = report.deviceSplit.map(i => i.value);
   chartInstances.device.update();
 
-  chartInstances.channel.data.labels = report.trafficByChannel.map(item => item.name);
-  chartInstances.channel.data.datasets[0].data = report.trafficByChannel.map(item => item.value);
+  chartInstances.channel.data.labels = report.trafficByChannel.map(i => i.name);
+  chartInstances.channel.data.datasets[0].data = report.trafficByChannel.map(i => i.value);
   chartInstances.channel.update();
 
   chartInstances.gsc.data.labels = report.gscTrend.labels;
@@ -236,16 +223,14 @@ function renderCharts(report) {
   chartInstances.gsc.data.datasets[1].data = report.gscTrend.clicks;
   chartInstances.gsc.update();
 
-  chartInstances.serp.data.labels = report.serpFeatures.map(item => item.name);
-  chartInstances.serp.data.datasets[0].data = report.serpFeatures.map(item => item.value);
-  chartInstances.serp.update();
+  chartInstances.aeo.data.labels = report.aeoSources.map(i => i.name);
+  chartInstances.aeo.data.datasets[0].data = report.aeoSources.map(i => i.value);
+  chartInstances.aeo.update();
 }
 
 function resizeCharts() {
   Object.values(chartInstances).forEach(chart => {
-    if (chart && typeof chart.resize === 'function') {
-      chart.resize();
-    }
+    if (chart && typeof chart.resize === 'function') chart.resize();
   });
 }
 
@@ -262,7 +247,7 @@ function tooltipOptions() {
 
 function axisOptions() {
   return {
-    grid: { color: chartColors.grid },
+    grid:   { color: chartColors.grid },
     border: { color: chartColors.border }
   };
 }

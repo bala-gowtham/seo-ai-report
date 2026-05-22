@@ -12,36 +12,6 @@
   flex: 0 0 auto;
 }
 
-.export-calendar {
-  width: 13px;
-  height: 13px;
-  border: 1.8px solid #6b7280;
-  border-radius: 3px;
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.export-calendar::before {
-  content: "";
-  position: absolute;
-  left: -1.8px;
-  top: 3px;
-  width: 13px;
-  height: 1.8px;
-  background: #6b7280;
-}
-
-.export-calendar::after {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: -3px;
-  width: 5px;
-  height: 4px;
-  border-left: 1.8px solid #6b7280;
-  border-right: 1.8px solid #6b7280;
-}
-
 html.dashboard-exporting-html,
 body.dashboard-exporting {
   width: 1200px !important;
@@ -84,7 +54,7 @@ body.dashboard-exporting .report-filter-bar {
   display: flex !important;
   align-items: flex-end !important;
   justify-content: flex-end !important;
-  gap: 12px !important;
+  gap: 10px !important;
   flex-wrap: nowrap !important;
 }
 
@@ -105,7 +75,7 @@ body.dashboard-exporting .filter-field label {
 }
 
 body.dashboard-exporting .filter-select,
-body.dashboard-exporting .filter-date {
+body.dashboard-exporting .filter-month {
   display: none !important;
 }
 
@@ -127,19 +97,22 @@ body.dashboard-exporting .export-field-value {
 }
 
 body.dashboard-exporting #exportProjectValue {
-  width: 182px !important;
+  width: 170px !important;
   padding: 0 13px 0 14px !important;
 }
 
-body.dashboard-exporting #exportFromValue,
-body.dashboard-exporting #exportToValue {
-  width: 132px !important;
-  padding: 0 11px 0 12px !important;
+body.dashboard-exporting #exportMonthValue {
+  width: 140px !important;
+  padding: 0 14px !important;
+}
+
+body.dashboard-exporting .btn-submit {
+  display: none !important;
 }
 
 body.dashboard-exporting .btn-export {
   height: 34px !important;
-  min-width: 118px !important;
+  min-width: 112px !important;
   padding: 0 16px !important;
   margin: 0 !important;
   align-self: flex-end !important;
@@ -155,11 +128,7 @@ body.dashboard-exporting .kpi-grid {
 }
 
 body.dashboard-exporting .charts-row-2 {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
-}
-
-body.dashboard-exporting .charts-row-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) !important;
 }
 
 body.dashboard-exporting .chart-card {
@@ -179,18 +148,16 @@ body.dashboard-exporting canvas {
   max-height: 210px !important;
 }
 
-body.dashboard-exporting .rank-table {
-  min-width: 0 !important;
-}
-
-body.dashboard-exporting .rank-table th,
-body.dashboard-exporting .rank-table td {
+body.dashboard-exporting .data-table th,
+body.dashboard-exporting .data-table td {
   white-space: normal !important;
 }
 
+body.dashboard-exporting #loadingState,
+body.dashboard-exporting #errorState {
+  display: none !important;
+}
+
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
+  @page { size: A4 portrait; margin: 0; }
 }

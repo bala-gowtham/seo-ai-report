@@ -1,152 +1,106 @@
 const REPORT_CONFIG = {
-  /*
-    Webhook path updated to sheets-config version.
-    Change to /webhook/seo-report-sheets-test for test or production path when ready.
-  */
-  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook-test/seo-report-sheets-test'
+  n8nWebhookUrl: 'https://YOUR-N8N-DOMAIN/webhook/seo-overview-report',
+  useDemoFallback: true
 };
 
 const DEFAULT_KPIS = {
-  totalSessions: {
-    value: 24816,
-    change: 12.4,
-    suffix: '',
-    changeSuffix: '%'
-  },
-  organicSessions: {
-    value: 18620,
-    change: 9.7,
-    suffix: '',
-    changeSuffix: '%'
-  },
-  gscClicks: {
-    value: 9340,
-    change: 8.1,
-    suffix: '',
-    changeSuffix: '%'
-  },
-  gscImpressions: {
-    value: 163400,
-    change: 11.6,
-    suffix: '',
-    changeSuffix: '%'
-  },
-  avgCtr: {
-    value: 5.7,
-    change: 0.4,
-    suffix: '%',
-    changeSuffix: ' pp'
-  },
-  avgPosition: {
-    value: 14.2,
-    change: -2.3,
-    suffix: '',
-    changeSuffix: ' pos',
-    betterWhenDown: true
-  },
-  bounceRate: {
-    value: 34.7,
-    change: -5.2,
-    suffix: '%',
-    changeSuffix: ' pp',
-    betterWhenDown: true
-  },
-  conversions: {
-    value: 186,
-    change: 14.9,
-    suffix: '',
-    changeSuffix: '%'
-  }
+  totalSessions:   { value: 24816, change: 12.4,  suffix: '',  changeSuffix: '%' },
+  organicSessions: { value: 18620, change: 9.7,   suffix: '',  changeSuffix: '%' },
+  gscClicks:       { value: 9340,  change: 8.1,   suffix: '',  changeSuffix: '%' },
+  gscImpressions:  { value: 163400,change: 11.6,  suffix: '',  changeSuffix: '%' },
+  avgCtr:          { value: 5.7,   change: 0.4,   suffix: '%', changeSuffix: ' pp' },
+  avgPosition:     { value: 14.2,  change: -2.3,  suffix: '',  changeSuffix: ' pos', betterWhenDown: true },
+  engagementRate:  { value: 61.2,  change: 4.8,   suffix: '%', changeSuffix: ' pp' },
+  conversions:     { value: 186,   change: 14.9,  suffix: '',  changeSuffix: '%' }
 };
 
 const DEMO_REPORT_DATA = {
+  ok: true,
   meta: {
-    clientId: 'acme-corp',
-    clientName: 'Acme Corp',
+    projectId: 'repute',
+    projectName: 'Repute',
     from: '2026-05-01',
-    to: '2026-05-08',
-    prevFrom: '2026-04-23',
-    prevTo: '2026-04-30',
+    to: '2026-05-31',
     monthLabel: 'May 2026',
-    sourceLabel: 'GA4 · GSC · Stored Search Data',
-    latestRefreshId: null,
-    latestRefreshStatus: null,
-    latestRefreshCompletedAt: null,
-    latestRefreshNotes: null
+    sourceLabel: 'GA4 · GSC · AEO Signals'
   },
   kpis: { ...DEFAULT_KPIS },
   sessionsOverTime: {
-    labels: ['May 1', 'May 2', 'May 3', 'May 4', 'May 5', 'May 6', 'May 7', 'May 8'],
-    current: [2840, 3120, 2980, 3450, 3280, 3780, 3540, 2828],
-    previous: [2200, 2650, 2410, 2900, 2760, 3100, 2940, 2500]
+    labels:   ['May 1','May 5','May 10','May 15','May 20','May 25','May 31'],
+    current:  [2840, 3120, 2980, 3450, 3280, 3780, 3540],
+    previous: [2200, 2650, 2410, 2900, 2760, 3100, 2940]
   },
   deviceSplit: [
-    { name: 'Desktop', icon: '🖥', value: 68 },
-    { name: 'Mobile', icon: '📱', value: 26 },
-    { name: 'Tablet', icon: '📟', value: 6 }
-  ],
-  rankTracker: [
-    { position: 1, keyword: 'seo agency india', title: 'SEO Agency India', domain: 'example.in', url: '/services/seo', change: 3, volume: '8.2k' },
-    { position: 3, keyword: 'digital marketing coimbatore', title: 'Digital Marketing Coimbatore', domain: 'example.in', url: '/locations/cbtr', change: 1, volume: '2.9k' },
-    { position: 5, keyword: 'seo reporting automation', title: 'SEO Reporting Automation', domain: 'example.in', url: '/blog/seo-auto', change: 0, volume: '1.6k' }
+    { name: 'Desktop', value: 68 },
+    { name: 'Mobile',  value: 26 },
+    { name: 'Tablet',  value: 6 }
   ],
   trafficByChannel: [
-    { name: 'Organic', value: 12400 },
-    { name: 'Direct', value: 5600 },
-    { name: 'Referral', value: 3100 },
-    { name: 'Paid', value: 1800 },
-    { name: 'Social', value: 1200 },
-    { name: 'Email', value: 716 }
+    { name: 'Organic Search', value: 12400 },
+    { name: 'Direct',         value: 5600 },
+    { name: 'Referral',       value: 3100 },
+    { name: 'Paid Search',    value: 1800 },
+    { name: 'Social',         value: 1200 },
+    { name: 'Email',          value: 716 }
   ],
   gscTrend: {
-    labels: ['May 1', 'May 2', 'May 3', 'May 4', 'May 5', 'May 6', 'May 7', 'May 8'],
-    impressions: [18400, 21200, 19800, 23400, 22100, 25600, 24200, 20000],
-    clicks: [1040, 1280, 1120, 1440, 1320, 1580, 1460, 1100]
+    labels:      ['May 1','May 5','May 10','May 15','May 20','May 25','May 31'],
+    impressions: [18400, 21200, 19800, 23400, 22100, 25600, 24200],
+    clicks:      [1040,  1280,  1120,  1440,  1320,  1580,  1460]
   },
-  serpFeatures: [
-    { name: 'Featured Snippet', value: 24 },
-    { name: 'AI Overview', value: 18 },
-    { name: 'People Also Ask', value: 32 },
-    { name: 'Local Pack', value: 12 },
-    { name: 'Video', value: 8 },
-    { name: 'Knowledge', value: 6 }
+  gscKeywords: [
+    { query: 'seo agency india',            clicks: 420, impressions: 8200, ctr: 5.12, position: 3.4 },
+    { query: 'digital marketing coimbatore',clicks: 290, impressions: 5900, ctr: 4.92, position: 4.1 },
+    { query: 'seo reporting automation',    clicks: 185, impressions: 4400, ctr: 4.20, position: 5.7 },
+    { query: 'ai seo tools 2026',           clicks: 130, impressions: 6100, ctr: 2.13, position: 9.2 },
+    { query: 'rank tracking software',      clicks: 98,  impressions: 3800, ctr: 2.58, position: 7.8 }
+  ],
+  aeoSources: [
+    { name: 'chatgpt.com',        value: 38 },
+    { name: 'perplexity.ai',      value: 22 },
+    { name: 'gemini.google.com',  value: 14 },
+    { name: 'claude.ai',          value: 9 },
+    { name: 'copilot.microsoft.com', value: 5 }
+  ],
+  aeoLandingPages: [
+    { sourceMedium: 'chatgpt.com / referral',     landingPage: '/services/seo',      sessions: 16, engagedSessions: 13, engagementRate: 81.25, avgEngagementTime: '2m 14s' },
+    { sourceMedium: 'perplexity.ai / referral',   landingPage: '/blog/seo-auto',     sessions: 12, engagedSessions: 9,  engagementRate: 75.00, avgEngagementTime: '1m 52s' },
+    { sourceMedium: 'gemini.google.com / referral',landingPage: '/contact/',         sessions: 8,  engagedSessions: 6,  engagementRate: 75.00, avgEngagementTime: '0m 58s' },
+    { sourceMedium: 'claude.ai / referral',       landingPage: '/blog/ai-overview',  sessions: 5,  engagedSessions: 4,  engagementRate: 80.00, avgEngagementTime: '3m 02s' }
   ],
   countries: [
-    { name: 'India', icon: '🇮🇳', value: 72 },
-    { name: 'USA', icon: '🇺🇸', value: 14 },
-    { name: 'UK', icon: '🇬🇧', value: 7 },
-    { name: 'Australia', icon: '🇦🇺', value: 4 },
-    { name: 'Singapore', icon: '🇸🇬', value: 3 }
-  ]
+    { name: 'India',     value: 72 },
+    { name: 'USA',       value: 14 },
+    { name: 'UK',        value: 7 },
+    { name: 'Australia', value: 4 },
+    { name: 'Singapore', value: 3 }
+  ],
+  warnings: []
 };
 
 async function fetchReportData(params) {
-  const url = REPORT_CONFIG.n8nWebhookUrl;
-
-  if (!url) {
-    return getDemoData(params);
-  }
-
-  const requestUrl = new URL(url);
-  requestUrl.searchParams.set('client', params.clientId);
-  requestUrl.searchParams.set('from', params.from);
-  requestUrl.searchParams.set('to', params.to);
-
   try {
-    const response = await fetch(requestUrl.toString(), {
-      method: 'GET',
-      headers: { Accept: 'application/json' }
+    const response = await fetch(REPORT_CONFIG.n8nWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: params.projectId,
+        month:     params.month,
+        from:      params.from,
+        to:        params.to
+      })
     });
 
-    if (!response.ok) {
-      throw new Error(`n8n returned ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`n8n returned ${response.status}`);
 
     const liveData = await response.json();
     return normalizeReportData(liveData, params);
   } catch (error) {
-    console.warn('Using demo data because report fetch failed:', error);
-    return getDemoData(params);
+    console.warn('Report fetch failed:', error);
+    if (REPORT_CONFIG.useDemoFallback) {
+      return getDemoData(params);
+    }
+    throw error;
   }
 }
 
@@ -161,46 +115,28 @@ function normalizeReportData(report, params = {}) {
   const data = {
     ...fallback,
     ...incoming,
-    meta: {
-      ...fallback.meta,
-      ...(incoming.meta || {})
-    },
-    sessionsOverTime: {
-      ...fallback.sessionsOverTime,
-      ...(incoming.sessionsOverTime || {})
-    },
-    gscTrend: {
-      ...fallback.gscTrend,
-      ...(incoming.gscTrend || {})
-    },
-    deviceSplit: Array.isArray(incoming.deviceSplit) ? incoming.deviceSplit : fallback.deviceSplit,
-    rankTracker: Array.isArray(incoming.rankTracker) ? incoming.rankTracker : fallback.rankTracker,
-    trafficByChannel: Array.isArray(incoming.trafficByChannel) ? incoming.trafficByChannel : fallback.trafficByChannel,
-    serpFeatures: Array.isArray(incoming.serpFeatures) ? incoming.serpFeatures : fallback.serpFeatures,
-    countries: Array.isArray(incoming.countries) ? incoming.countries : fallback.countries
+    meta: { ...fallback.meta, ...(incoming.meta || {}) },
+    sessionsOverTime: { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
+    gscTrend:         { ...fallback.gscTrend,         ...(incoming.gscTrend || {}) },
+    deviceSplit:       Array.isArray(incoming.deviceSplit)       ? incoming.deviceSplit       : fallback.deviceSplit,
+    trafficByChannel:  Array.isArray(incoming.trafficByChannel)  ? incoming.trafficByChannel  : fallback.trafficByChannel,
+    gscKeywords:       Array.isArray(incoming.gscKeywords)       ? incoming.gscKeywords       : fallback.gscKeywords,
+    aeoSources:        Array.isArray(incoming.aeoSources)        ? incoming.aeoSources        : fallback.aeoSources,
+    aeoLandingPages:   Array.isArray(incoming.aeoLandingPages)   ? incoming.aeoLandingPages   : fallback.aeoLandingPages,
+    countries:         Array.isArray(incoming.countries)         ? incoming.countries         : fallback.countries,
+    warnings:          Array.isArray(incoming.warnings)          ? incoming.warnings          : []
   };
 
-  if (params.clientId) {
-    data.meta.clientId = params.clientId;
-    data.meta.clientName = getClientName(params.clientId);
+  if (params.projectId) {
+    data.meta.projectId   = params.projectId;
+    data.meta.projectName = getProjectName(params.projectId);
   }
+  if (params.from)   data.meta.from  = params.from;
+  if (params.to)     data.meta.to    = params.to;
+  if (params.month)  data.meta.month = params.month;
 
-  if (params.from) {
-    data.meta.from = params.from;
-  }
-
-  if (params.to) {
-    data.meta.to = params.to;
-  }
-
-  data.meta.monthLabel = formatMonthFromDate(data.meta.from);
-  data.meta.sourceLabel = data.meta.sourceLabel || 'GA4 · GSC · Stored Search Data';
-
-  // Preserve new meta fields from live webhook
-  data.meta.latestRefreshId = incoming.meta?.latestRefreshId ?? data.meta.latestRefreshId ?? null;
-  data.meta.latestRefreshStatus = incoming.meta?.latestRefreshStatus ?? data.meta.latestRefreshStatus ?? null;
-  data.meta.latestRefreshCompletedAt = incoming.meta?.latestRefreshCompletedAt ?? data.meta.latestRefreshCompletedAt ?? null;
-  data.meta.latestRefreshNotes = incoming.meta?.latestRefreshNotes ?? data.meta.latestRefreshNotes ?? null;
+  data.meta.monthLabel   = data.meta.monthLabel  || formatMonthLabel(params.month || data.meta.from);
+  data.meta.sourceLabel  = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
 
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
 
@@ -209,42 +145,30 @@ function normalizeReportData(report, params = {}) {
 
 function mergeKpis(defaultKpis, incomingKpis) {
   const merged = {};
-
   Object.keys(defaultKpis).forEach(key => {
-    merged[key] = {
-      ...defaultKpis[key],
-      ...((incomingKpis && incomingKpis[key]) || {})
-    };
+    merged[key] = { ...defaultKpis[key], ...((incomingKpis && incomingKpis[key]) || {}) };
   });
-
   Object.keys(incomingKpis || {}).forEach(key => {
-    if (!merged[key]) {
-      merged[key] = { ...incomingKpis[key] };
-    }
+    if (!merged[key]) merged[key] = { ...incomingKpis[key] };
   });
-
   return merged;
 }
 
-function getClientName(clientId) {
+function getProjectName(projectId) {
   const names = {
-    'acme-corp': 'Acme Corp',
-    'techbrand-india': 'TechBrand India',
-    startupx: 'StartupX',
-    'local-seo-client': 'Local SEO Client',
-    repute: 'Repute'
+    'repute':           'Repute',
+    'acme-corp':        'Acme Corp',
+    'techbrand-india':  'TechBrand India',
+    'startupx':         'StartupX',
+    'local-seo-client': 'Local SEO Client'
   };
-
-  return names[clientId] || clientId;
+  return names[projectId] || projectId;
 }
 
-function formatMonthFromDate(value) {
+function formatMonthLabel(value) {
   if (!value) return 'May 2026';
-
-  const date = new Date(value + 'T00:00:00');
-
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric'
-  });
+  // Handles 'YYYY-MM' or 'YYYY-MM-DD'
+  const parts = value.split('-').map(Number);
+  const date = new Date(parts[0], parts[1] - 1, 1);
+  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
