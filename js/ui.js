@@ -1,6 +1,6 @@
 let currentReport = null;
 
-// ─── Demo preview ────────────────────────────────────────────────────────────
+// ── Demo on load ─────────────────────────────────────────
 function loadDemoPreview() {
   const filters = getCurrentFilters();
   const report  = getDemoData(filters);
@@ -8,46 +8,53 @@ function loadDemoPreview() {
   renderDashboard(report);
 }
 
-// ─── Filters ─────────────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────
 function getCurrentFilters() {
-  const projectId  = document.getElementById('projectSelector')?.value  || 'repute';
-  const monthValue = document.getElementById('monthSelector')?.value    || getCurrentMonth();
+  const projectId  = document.getElementById('projectSelector')?.value || 'repute';
+  const monthValue = document.getElementById('monthSelector')?.value   || getCurrentMonth();
   const { from, to } = monthToDateRange(monthValue);
   return { projectId, month: monthValue, from, to };
 }
 
 function getCurrentMonth() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 
 function monthToDateRange(monthValue) {
   const [year, month] = monthValue.split('-').map(Number);
-  const from    = `${year}-${String(month).padStart(2, '0')}-01`;
+  const from    = `${year}-${String(month).padStart(2,'0')}-01`;
   const lastDay = new Date(year, month, 0).getDate();
-  const to      = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const to      = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   return { from, to };
 }
 
 function setDefaultMonth() {
   const el = document.getElementById('monthSelector');
-  if (el && !el.value) el.value = getCurrentMonth();
+  if (el) el.value = getCurrentMonth();
 }
 
-// ─── Report controls ─────────────────────────────────────────────────────────
+// ── Controls ──────────────────────────────────────────────
 function initReportControls() {
   const submitBtn = document.getElementById('submitReportBtn');
   if (submitBtn) submitBtn.addEventListener('click', reloadReport);
+
+  const navExport = document.getElementById('navExport');
+  if (navExport) navExport.addEventListener('click', () => {
+    document.getElementById('exportBtn')?.click();
+  });
 }
 
 async function reloadReport() {
   const submitBtn = document.getElementById('submitReportBtn');
   const loading   = document.getElementById('loadingState');
   const error     = document.getElementById('errorState');
+  const content   = document.getElementById('dashboardContent');
 
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Loading…'; }
   if (loading)   loading.style.display = 'flex';
   if (error)     error.style.display   = 'none';
+  if (content)   content.style.opacity = '0.4';
 
   try {
     const filters = getCurrentFilters();
@@ -59,50 +66,99 @@ async function reloadReport() {
     if (error) error.style.display = 'flex';
   } finally {
     if (loading) loading.style.display = 'none';
+    if (content) content.style.opacity = '1';
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Generate Report'; }
   }
 }
 
-// ─── Dashboard render ─────────────────────────────────────────────────────────
+// ── Dashboard render ──────────────────────────────────────
 function renderDashboard(report) {
   renderMeta(report);
   renderKpis(report);
   renderCharts(report);
-  renderGscKeywordTable(report.gscKeywords   || []);
-  renderAeoTable(report.aeoLandingPages      || []);
+  renderGscKeywordTable(report.gscKeywords  || []);
+  renderAeoTable(report.aeoLandingPages     || []);
   renderMetricBars('deviceBars',  report.deviceSplit || [], '%');
   renderMetricBars('countryBars', report.countries   || [], '%');
+  renderInsightBanner(report);
+  renderDonutCenter(report);
+  renderAeoTotalPill(report);
+  renderFooter(report);
   syncExportControls(report);
 }
 
 function renderMeta(report) {
   const meta     = report.meta || {};
   const subtitle = document.getElementById('reportSubtitle');
-  const title    = document.getElementById('reportTitle');
   if (subtitle) subtitle.textContent =
     `${meta.projectName || meta.projectId || 'Project'} · ${meta.monthLabel || ''} · ${meta.sourceLabel || 'GA4 · GSC · AEO Signals'}`;
-  if (title) title.textContent =
-    `${meta.projectName || 'SEO Overview'} — ${meta.monthLabel || ''}`;
 }
 
-// ─── KPIs ─────────────────────────────────────────────────────────────────────
-// HTML structure:
-//   <div class="kpi-card">
-//     <div class="kpi-value" data-kpi="totalSessions">—</div>
-//     <div class="kpi-change" data-kpi-change="totalSessions">—</div>
-//   </div>
-// → select .kpi-value[data-kpi] directly, then find sibling [data-kpi-change]
+// ── Insight banner ────────────────────────────────────────
+function renderInsightBanner(report) {
+  const banner = document.getElementById('insightBanner');
+  const text   = document.getElementById('insightBannerText');
+  if (!banner || !text) return;
+
+  const meta    = report.meta || {};
+  const kpis    = report.kpis || {};
+  const insights = [];
+
+  if (meta.from && meta.to) {
+    const days = Math.round((new Date(meta.to) - new Date(meta.from)) / 86400000) + 1;
+    insights.push(`Report covers ${meta.monthLabel || meta.from} · ${days} days`);
+  }
+  const total   = kpis.totalSessions?.value;
+  const organic = kpis.organicSessions?.value;
+  if (total && organic) {
+    const orgPct = Math.round((organic / total) * 100);
+    insights.push(`${orgPct}% of sessions are organic`);
+  }
+  const pos = kpis.avgPosition?.value;
+  if (pos)   insights.push(`Average GSC position: ${pos}`);
+
+  text.textContent = insights.join('  ·  ');
+  banner.style.display = 'flex';
+}
+
+// ── Donut center total ────────────────────────────────────
+function renderDonutCenter(report) {
+  const el = document.getElementById('donutTotal');
+  if (!el) return;
+  const total = report.kpis?.totalSessions?.value;
+  el.textContent = total ? fmtShort(total) : '—';
+}
+
+// ── AEO pill total ────────────────────────────────────────
+function renderAeoTotalPill(report) {
+  const pill  = document.getElementById('aeoTotalPill');
+  const count = document.getElementById('aeoTotalCount');
+  if (!pill || !count) return;
+  const total = (report.aeoSources || []).reduce((s, i) => s + (i.value || 0), 0);
+  if (total > 0) {
+    count.textContent = total;
+    pill.style.display = 'block';
+  } else {
+    pill.style.display = 'none';
+  }
+}
+
+// ── Footer ────────────────────────────────────────────────
+function renderFooter(report) {
+  const el = document.getElementById('footerGenDate');
+  if (!el) return;
+  const now = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  el.textContent = `Generated on ${now}`;
+}
+
+// ── KPIs ─────────────────────────────────────────────────
 function renderKpis(report) {
   const kpis = report.kpis || {};
-
   document.querySelectorAll('.kpi-value[data-kpi]').forEach(valEl => {
     const key  = valEl.dataset.kpi;
     const data = kpis[key];
     if (!data) return;
-
-    valEl.textContent = formatValue(data.value) + (data.suffix || '');
-
-    // sibling change element uses data-kpi-change
+    animateNumber(valEl, data.value, data.suffix || '');
     const changeEl = valEl.parentElement?.querySelector(`[data-kpi-change="${key}"]`);
     if (changeEl) setKpiChange(changeEl, data);
   });
@@ -110,36 +166,66 @@ function renderKpis(report) {
 
 function setKpiChange(el, data) {
   const raw    = data.change;
-  const better = data.betterWhenDown ? raw < 0 : raw >= 0;
-  const sign   = raw >= 0 ? '+' : '';
+  const better = data.betterWhenDown ? raw <= 0 : raw >= 0;
+  const sign   = raw > 0 ? '+' : '';
   el.textContent = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} vs prev`;
   el.className   = 'kpi-change ' + (better ? 'up' : 'down');
 }
 
-// ─── Tables ───────────────────────────────────────────────────────────────────
+// ── Number animation ─────────────────────────────────────
+function animateNumber(el, target, suffix) {
+  const start    = 0;
+  const duration = 600;
+  const startTs  = performance.now();
+  const isFloat  = !Number.isInteger(target);
+
+  function step(ts) {
+    const progress = Math.min((ts - startTs) / duration, 1);
+    const eased    = 1 - Math.pow(1 - progress, 3);
+    const value    = start + (target - start) * eased;
+    el.textContent = (isFloat ? value.toFixed(1) : Math.round(value).toLocaleString()) + suffix;
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── GSC keyword table ─────────────────────────────────────
 function renderGscKeywordTable(items) {
   const tbody = document.getElementById('gscKeywordTableBody');
   if (!tbody) return;
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">No keyword data available</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--text-muted);font-size:12px;">No keyword data available</td></tr>`;
     return;
   }
-  tbody.innerHTML = items.map(item => `
+  const maxCtr = Math.max(...items.map(i => i.ctr), 1);
+  tbody.innerHTML = items.map((item, idx) => {
+    const pos     = item.position;
+    const posCls  = pos <= 3 ? 'pos-top3' : pos <= 10 ? 'pos-top10' : 'pos-out';
+    const ctrPct  = Math.min((item.ctr / maxCtr) * 100, 100).toFixed(1);
+    return `
     <tr>
-      <td style="font-weight:500;color:var(--text-primary)">${escHtml(item.query)}</td>
+      <td class="row-num">${idx + 1}</td>
+      <td style="font-weight:500;color:var(--text-primary);max-width:260px">${escHtml(item.query)}</td>
       <td class="num-cell">${formatInt(item.clicks)}</td>
       <td class="num-cell">${formatInt(item.impressions)}</td>
-      <td class="num-cell">${formatValue(item.ctr)}%</td>
-      <td class="num-cell">${formatValue(item.position)}</td>
-    </tr>`).join('');
+      <td class="num-cell">
+        <div class="ctr-bar-wrap">
+          <div class="ctr-mini-bar"><div class="ctr-mini-fill" style="width:${ctrPct}%"></div></div>
+          <span>${formatValue(item.ctr)}%</span>
+        </div>
+      </td>
+      <td class="num-cell"><span class="pos-badge ${posCls}">${formatValue(item.position)}</span></td>
+    </tr>`;
+  }).join('');
 }
 
+// ── AEO table ─────────────────────────────────────────────
 function renderAeoTable(items) {
-  const wrap  = document.getElementById('aeoTableWrap');
-  const tbody = document.getElementById('aeoTableBody');
+  const section = document.getElementById('aeoTableSection');
+  const tbody   = document.getElementById('aeoTableBody');
   if (!tbody) return;
-  if (!items.length) { if (wrap) wrap.style.display = 'none'; return; }
-  if (wrap) wrap.style.display = '';
+  if (!items.length) { if (section) section.style.display = 'none'; return; }
+  if (section) section.style.display = '';
   tbody.innerHTML = items.map(item => `
     <tr>
       <td>${escHtml(item.sourceMedium)}</td>
@@ -151,15 +237,10 @@ function renderAeoTable(items) {
     </tr>`).join('');
 }
 
-// ─── Metric bars ─────────────────────────────────────────────────────────────
-// Uses .mrow / .mname / .mbar / .mfill / .mval from layout.css
-// items[].value must be PERCENTAGE (0–100)
+// ── Metric bars ───────────────────────────────────────────
 const BAR_COLORS = [
-  'var(--accent-teal)',
-  'var(--accent-sky)',
-  'var(--accent-violet)',
-  'var(--accent-amber)',
-  'var(--accent-lime)'
+  'var(--accent-orange)','var(--accent-sky)',
+  'var(--accent-violet)','var(--accent-amber)','var(--accent-teal)'
 ];
 
 function renderMetricBars(containerId, items, suffix) {
@@ -172,13 +253,20 @@ function renderMetricBars(containerId, items, suffix) {
     return `
       <div class="mrow">
         <span class="mname">${escHtml(item.name)}</span>
-        <div class="mbar"><div class="mfill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+        <div class="mbar"><div class="mfill" style="width:0%;background:${color}"></div></div>
         <span class="mval">${formatValue(item.value)}${suffix || ''}</span>
       </div>`;
   }).join('');
+  // Animate bars in next frame
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.mfill').forEach((fill, idx) => {
+      const pct = (items[idx].value / max) * 100;
+      fill.style.width = pct.toFixed(1) + '%';
+    });
+  });
 }
 
-// ─── Export helpers ───────────────────────────────────────────────────────────
+// ── Export helpers ────────────────────────────────────────
 function syncExportControls(report) {
   const meta    = report?.meta || {};
   const projEl  = document.getElementById('exportProjectValue');
@@ -187,7 +275,7 @@ function syncExportControls(report) {
   if (monthEl) monthEl.textContent = meta.monthLabel || '';
 }
 
-// ─── Formatters ───────────────────────────────────────────────────────────────
+// ── Formatters ────────────────────────────────────────────
 function formatValue(v) {
   if (v === null || v === undefined) return '—';
   const n = parseFloat(v);
@@ -200,11 +288,15 @@ function formatInt(v) {
   return isNaN(n) ? '—' : n.toLocaleString();
 }
 
+function fmtShort(v) {
+  if (v >= 1_000_000) return (v/1_000_000).toFixed(1).replace(/\.0$/,'') + 'M';
+  if (v >= 1000)      return (v/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+  return v.toLocaleString();
+}
+
 function escHtml(str) {
   if (!str) return '';
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
