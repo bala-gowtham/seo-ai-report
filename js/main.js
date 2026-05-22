@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
   createCharts();
   initReportControls();
   setDefaultMonth();
-  // Demo mode: auto-load on page open so dashboard isn't blank
-  reloadReport();
+  // Do NOT call reloadReport() here.
+  // The user must click Generate Report to fetch data.
+  // To enable demo preview on load, uncomment the line below:
+  // reloadReport();
 });
