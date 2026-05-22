@@ -1,7 +1,6 @@
 let currentReport = null;
 
 // ─── Demo preview ────────────────────────────────────────────────────────────
-// Called once on page load. Renders demo data locally — no n8n call.
 function loadDemoPreview() {
   const filters = getCurrentFilters();
   const report  = getDemoData(filters);
@@ -38,9 +37,7 @@ function setDefaultMonth() {
 // ─── Report controls ─────────────────────────────────────────────────────────
 function initReportControls() {
   const submitBtn = document.getElementById('submitReportBtn');
-  if (submitBtn) {
-    submitBtn.addEventListener('click', reloadReport);
-  }
+  if (submitBtn) submitBtn.addEventListener('click', reloadReport);
 }
 
 async function reloadReport() {
@@ -71,8 +68,8 @@ function renderDashboard(report) {
   renderMeta(report);
   renderKpis(report);
   renderCharts(report);
-  renderGscKeywordTable(report.gscKeywords || []);
-  renderAeoTable(report.aeoLandingPages   || []);
+  renderGscKeywordTable(report.gscKeywords   || []);
+  renderAeoTable(report.aeoLandingPages      || []);
   renderMetricBars('deviceBars',  report.deviceSplit || [], '%');
   renderMetricBars('countryBars', report.countries   || [], '%');
   syncExportControls(report);
@@ -82,7 +79,6 @@ function renderMeta(report) {
   const meta     = report.meta || {};
   const subtitle = document.getElementById('reportSubtitle');
   const title    = document.getElementById('reportTitle');
-
   if (subtitle) subtitle.textContent =
     `${meta.projectName || meta.projectId || 'Project'} · ${meta.monthLabel || ''} · ${meta.sourceLabel || 'GA4 · GSC · AEO Signals'}`;
   if (title) title.textContent =
@@ -92,41 +88,38 @@ function renderMeta(report) {
 // ─── KPIs ─────────────────────────────────────────────────────────────────────
 function renderKpis(report) {
   const kpis = report.kpis || {};
-
   document.querySelectorAll('[data-kpi]').forEach(card => {
     const key  = card.dataset.kpi;
     const data = kpis[key];
     if (!data) return;
-
     const valEl    = card.querySelector('.kpi-value');
     const changeEl = card.querySelector('.kpi-change');
-
-    if (valEl)    valEl.textContent    = formatValue(data.value) + (data.suffix || '');
+    if (valEl)    valEl.textContent = formatValue(data.value) + (data.suffix || '');
     if (changeEl) setKpiChange(changeEl, data);
   });
 }
 
 function setKpiChange(el, data) {
   const raw    = data.change;
+  // betterWhenDown: avg position — lower is better
   const better = data.betterWhenDown ? raw < 0 : raw >= 0;
   const sign   = raw >= 0 ? '+' : '';
-  el.textContent  = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} vs prev`;
-  el.className    = 'kpi-change ' + (better ? 'positive' : 'negative');
+  el.textContent = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} vs prev`;
+  // CSS classes are .kpi-change.up and .kpi-change.down
+  el.className   = 'kpi-change ' + (better ? 'up' : 'down');
 }
 
 // ─── Tables ───────────────────────────────────────────────────────────────────
 function renderGscKeywordTable(items) {
   const tbody = document.getElementById('gscKeywordTableBody');
   if (!tbody) return;
-
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-row">No keyword data available</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px;">No keyword data available</td></tr>`;
     return;
   }
-
   tbody.innerHTML = items.map(item => `
     <tr>
-      <td class="kw-query">${escHtml(item.query)}</td>
+      <td style="font-weight:500;color:var(--text-primary)">${escHtml(item.query)}</td>
       <td class="num-cell">${formatInt(item.clicks)}</td>
       <td class="num-cell">${formatInt(item.impressions)}</td>
       <td class="num-cell">${formatValue(item.ctr)}%</td>
@@ -138,12 +131,7 @@ function renderAeoTable(items) {
   const wrap  = document.getElementById('aeoTableWrap');
   const tbody = document.getElementById('aeoTableBody');
   if (!tbody) return;
-
-  if (!items.length) {
-    if (wrap) wrap.style.display = 'none';
-    return;
-  }
-
+  if (!items.length) { if (wrap) wrap.style.display = 'none'; return; }
   if (wrap) wrap.style.display = '';
   tbody.innerHTML = items.map(item => `
     <tr>
@@ -157,33 +145,43 @@ function renderAeoTable(items) {
 }
 
 // ─── Metric bars ─────────────────────────────────────────────────────────────
+// Uses existing CSS: .metric-list > .mrow > .mname + .mbar > .mfill + .mval
 // items[].value must be a PERCENTAGE (0–100)
+const BAR_COLORS = [
+  'var(--accent-teal)',
+  'var(--accent-sky)',
+  'var(--accent-violet)',
+  'var(--accent-amber)',
+  'var(--accent-lime)'
+];
+
 function renderMetricBars(containerId, items, suffix) {
   const el = document.getElementById(containerId);
   if (!el || !items.length) return;
 
   const max = Math.max(...items.map(i => i.value), 1);
 
-  el.innerHTML = items.map(item => {
-    const pct = (item.value / max) * 100;
-    return `
-      <div class="metric-bar-row">
-        <span class="metric-label">${escHtml(item.name)}</span>
-        <div class="metric-bar-track">
-          <div class="metric-bar-fill" style="width:${pct.toFixed(1)}%"></div>
-        </div>
-        <span class="metric-value">${formatValue(item.value)}${suffix || ''}</span>
-      </div>`;
-  }).join('');
+  el.innerHTML = `<div class="metric-list">${
+    items.map((item, idx) => {
+      const pct   = (item.value / max) * 100;
+      const color = BAR_COLORS[idx % BAR_COLORS.length];
+      return `
+        <div class="mrow">
+          <span class="mname">${escHtml(item.name)}</span>
+          <div class="mbar">
+            <div class="mfill" style="width:${pct.toFixed(1)}%;background:${color}"></div>
+          </div>
+          <span class="mval">${formatValue(item.value)}${suffix || ''}</span>
+        </div>`;
+    }).join('')
+  }</div>`;
 }
 
 // ─── Export helpers ───────────────────────────────────────────────────────────
 function syncExportControls(report) {
-  const meta = report?.meta || {};
-
+  const meta    = report?.meta || {};
   const projEl  = document.getElementById('exportProjectValue');
   const monthEl = document.getElementById('exportMonthValue');
-
   if (projEl)  projEl.textContent  = meta.projectName || meta.projectId || '';
   if (monthEl) monthEl.textContent = meta.monthLabel || '';
 }
