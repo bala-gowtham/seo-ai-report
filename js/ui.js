@@ -86,26 +86,33 @@ function renderMeta(report) {
 }
 
 // ─── KPIs ─────────────────────────────────────────────────────────────────────
+// HTML structure:
+//   <div class="kpi-card">
+//     <div class="kpi-value" data-kpi="totalSessions">—</div>
+//     <div class="kpi-change" data-kpi-change="totalSessions">—</div>
+//   </div>
+// → select .kpi-value[data-kpi] directly, then find sibling [data-kpi-change]
 function renderKpis(report) {
   const kpis = report.kpis || {};
-  document.querySelectorAll('[data-kpi]').forEach(card => {
-    const key  = card.dataset.kpi;
+
+  document.querySelectorAll('.kpi-value[data-kpi]').forEach(valEl => {
+    const key  = valEl.dataset.kpi;
     const data = kpis[key];
     if (!data) return;
-    const valEl    = card.querySelector('.kpi-value');
-    const changeEl = card.querySelector('.kpi-change');
-    if (valEl)    valEl.textContent = formatValue(data.value) + (data.suffix || '');
+
+    valEl.textContent = formatValue(data.value) + (data.suffix || '');
+
+    // sibling change element uses data-kpi-change
+    const changeEl = valEl.parentElement?.querySelector(`[data-kpi-change="${key}"]`);
     if (changeEl) setKpiChange(changeEl, data);
   });
 }
 
 function setKpiChange(el, data) {
   const raw    = data.change;
-  // betterWhenDown: avg position — lower is better
   const better = data.betterWhenDown ? raw < 0 : raw >= 0;
   const sign   = raw >= 0 ? '+' : '';
   el.textContent = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} vs prev`;
-  // CSS classes are .kpi-change.up and .kpi-change.down
   el.className   = 'kpi-change ' + (better ? 'up' : 'down');
 }
 
@@ -145,8 +152,8 @@ function renderAeoTable(items) {
 }
 
 // ─── Metric bars ─────────────────────────────────────────────────────────────
-// Uses existing CSS: .metric-list > .mrow > .mname + .mbar > .mfill + .mval
-// items[].value must be a PERCENTAGE (0–100)
+// Uses .mrow / .mname / .mbar / .mfill / .mval from layout.css
+// items[].value must be PERCENTAGE (0–100)
 const BAR_COLORS = [
   'var(--accent-teal)',
   'var(--accent-sky)',
@@ -158,23 +165,17 @@ const BAR_COLORS = [
 function renderMetricBars(containerId, items, suffix) {
   const el = document.getElementById(containerId);
   if (!el || !items.length) return;
-
   const max = Math.max(...items.map(i => i.value), 1);
-
-  el.innerHTML = `<div class="metric-list">${
-    items.map((item, idx) => {
-      const pct   = (item.value / max) * 100;
-      const color = BAR_COLORS[idx % BAR_COLORS.length];
-      return `
-        <div class="mrow">
-          <span class="mname">${escHtml(item.name)}</span>
-          <div class="mbar">
-            <div class="mfill" style="width:${pct.toFixed(1)}%;background:${color}"></div>
-          </div>
-          <span class="mval">${formatValue(item.value)}${suffix || ''}</span>
-        </div>`;
-    }).join('')
-  }</div>`;
+  el.innerHTML = items.map((item, idx) => {
+    const pct   = (item.value / max) * 100;
+    const color = BAR_COLORS[idx % BAR_COLORS.length];
+    return `
+      <div class="mrow">
+        <span class="mname">${escHtml(item.name)}</span>
+        <div class="mbar"><div class="mfill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+        <span class="mval">${formatValue(item.value)}${suffix || ''}</span>
+      </div>`;
+  }).join('');
 }
 
 // ─── Export helpers ───────────────────────────────────────────────────────────
