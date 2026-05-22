@@ -127,11 +127,12 @@ body::before {
 /* ─── Main layout ────────────────────────────────────── */
 .main {
   margin-left: 200px;
+  width: calc(100vw - 200px);
+  max-width: none;
   padding: 28px 32px;
-  position: relative; z-index: 1;
-  max-width: 1440px;
+  position: relative;
+  z-index: 1;
 }
-
 /* ─── Topbar ─────────────────────────────────────────── */
 .report-topbar {
   display: grid;
