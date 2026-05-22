@@ -185,8 +185,10 @@
         </div>
       </section>
 
-      <!-- ── Row 2: Device Split + Traffic by Channel ── -->
-      <section class="charts-row charts-row-equal">
+      <!-- ── Row 2: Device Split · Traffic by Channel · Top Landing Pages (3-col) ── -->
+      <section class="charts-row charts-row-third">
+
+        <!-- Device Split -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -203,6 +205,8 @@
             <div class="metric-list" id="deviceBars"></div>
           </div>
         </div>
+
+        <!-- Traffic by Channel -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -211,8 +215,21 @@
             </div>
             <span class="tag tag-sky">GA4</span>
           </div>
-          <canvas id="chanChart" style="max-height:220px"></canvas>
+          <canvas id="chanChart" style="max-height:210px"></canvas>
         </div>
+
+        <!-- Top Landing Pages (NEW) -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Top Landing Pages</div>
+              <div class="chart-subtitle">Organic entry pages by sessions · GA4</div>
+            </div>
+            <span class="tag tag-sky">GA4</span>
+          </div>
+          <div id="landingPageBars" class="metric-list compact-list"></div>
+        </div>
+
       </section>
 
       <!-- ── Row 3: GSC Clicks vs Impressions (full width) ── -->
@@ -268,15 +285,17 @@
         </div>
       </section>
 
-      <!-- ── Row 5: AEO Traffic Sources ── -->
+      <!-- ── Row 5: AEO Sources · Top Countries · Opportunity Queries (3-col) ── -->
       <div class="section-header">
         <div class="section-header-left">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="19" cy="5" r="3" fill="currentColor"/></svg>
           <span class="section-label">AEO &amp; AI Signals</span>
         </div>
-        <span class="section-desc">Referral traffic from AI tools · GA4 session source</span>
+        <span class="section-desc">Referral traffic from AI tools · GSC opportunity queries</span>
       </div>
-      <section class="charts-row charts-row-equal">
+      <section class="charts-row charts-row-third">
+
+        <!-- AEO Traffic Sources -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -290,6 +309,8 @@
           </div>
           <canvas id="aeoChart" style="max-height:200px"></canvas>
         </div>
+
+        <!-- Top Countries -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -300,6 +321,31 @@
           </div>
           <div class="metric-list" id="countryBars"></div>
         </div>
+
+        <!-- Opportunity Queries (NEW) -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Opportunity Queries</div>
+              <div class="chart-subtitle">High impressions · low CTR · GSC</div>
+            </div>
+            <span class="tag tag-amber">GSC</span>
+          </div>
+          <div id="opportunityQueriesWrap">
+            <table class="data-table opp-table">
+              <thead>
+                <tr>
+                  <th>Query</th>
+                  <th style="text-align:right">Impr.</th>
+                  <th style="text-align:right">CTR</th>
+                  <th style="text-align:right">Pos</th>
+                </tr>
+              </thead>
+              <tbody id="opportunityQueriesBody"></tbody>
+            </table>
+          </div>
+        </div>
+
       </section>
 
       <!-- AEO landing pages detail table -->

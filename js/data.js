@@ -1,16 +1,14 @@
 const REPORT_CONFIG = {
   // Replace with your real n8n webhook URL before going live.
-  // Example: 'https://your-n8n-domain/webhook/seo-overview-report'
   n8nWebhookUrl: 'https://YOUR-N8N-DOMAIN/webhook/seo-overview-report',
 
   // Keep true during development (uses DEMO_REPORT_DATA on fetch failure).
-  // Set to false when your n8n webhook is live and tested.
   useDemoFallback: true
 };
 
 /*
   ============================================================
-  N8N RESPONSE CONTRACT — read this before building the workflow
+  N8N RESPONSE CONTRACT
   ============================================================
 
   CTR (gscKeywords[].ctr):
@@ -19,21 +17,24 @@ const REPORT_CONFIG = {
 
   deviceSplit[].value:
     Must be a PERCENTAGE (0–100), not raw sessions.
-    e.g. { name: 'Desktop', value: 68 }  → 68% of total sessions
 
   countries[].value:
     Must be a PERCENTAGE (0–100), not raw sessions.
-    e.g. { name: 'India', value: 72 }    → 72% of total sessions
 
   aeoSources[].value:
-    Raw session count is fine here (used only for chart proportions).
+    Raw session count (used for doughnut proportions).
+
+  topLandingPages[].value:
+    Raw organic session count for bar proportion.
+
+  opportunityQueries:
+    High impressions, low CTR, reachable position.
+    ctr is a PERCENTAGE (e.g. 0.8 means 0.8%).
 
   CORS headers required from n8n:
     Access-Control-Allow-Origin: *
     Access-Control-Allow-Headers: Content-Type
     Access-Control-Allow-Methods: POST, OPTIONS
-
-  Full expected shape is documented below in DEMO_REPORT_DATA.
   ============================================================
 */
 
@@ -64,7 +65,6 @@ const DEMO_REPORT_DATA = {
     current:  [2840, 3120, 2980, 3450, 3280, 3780, 3540],
     previous: [2200, 2650, 2410, 2900, 2760, 3100, 2940]
   },
-  // deviceSplit: values are PERCENTAGES (sum should equal ~100)
   deviceSplit: [
     { name: 'Desktop', value: 68 },
     { name: 'Mobile',  value: 26 },
@@ -78,13 +78,20 @@ const DEMO_REPORT_DATA = {
     { name: 'Social',         value: 1200 },
     { name: 'Email',          value: 716 }
   ],
+  // topLandingPages: value is organic session count
+  topLandingPages: [
+    { name: '/services/seo/',          value: 3840 },
+    { name: '/blog/seo-automation/',   value: 2610 },
+    { name: '/',                       value: 2290 },
+    { name: '/blog/ai-overview/',      value: 1720 },
+    { name: '/contact/',               value: 1340 }
+  ],
   gscTrend: {
     labels:      ['May 1','May 5','May 10','May 15','May 20','May 25','May 31'],
     impressions: [18400, 21200, 19800, 23400, 22100, 25600, 24200],
     clicks:      [1040,  1280,  1120,  1440,  1320,  1580,  1460]
   },
-  // gscKeywords: ctr is a PERCENTAGE (e.g. 5.12 means 5.12%)
-  // n8n must multiply GSC API decimal ratio by 100 before sending
+  // ctr is PERCENTAGE (multiply GSC decimal ratio × 100 in n8n)
   gscKeywords: [
     { query: 'seo agency india',             clicks: 420, impressions: 8200, ctr: 5.12, position: 3.4 },
     { query: 'digital marketing coimbatore', clicks: 290, impressions: 5900, ctr: 4.92, position: 4.1 },
@@ -92,7 +99,15 @@ const DEMO_REPORT_DATA = {
     { query: 'ai seo tools 2026',            clicks: 130, impressions: 6100, ctr: 2.13, position: 9.2 },
     { query: 'rank tracking software',       clicks: 98,  impressions: 3800, ctr: 2.58, position: 7.8 }
   ],
-  // aeoSources: value is raw session count (used for doughnut proportions)
+  // opportunityQueries: high impressions, low CTR — AEO/content optimization targets
+  // ctr is PERCENTAGE
+  opportunityQueries: [
+    { query: 'best seo tools 2026',          impressions: 14200, ctr: 0.62, position: 11.4 },
+    { query: 'ai overview seo strategy',     impressions: 9800,  ctr: 0.48, position: 13.7 },
+    { query: 'how to rank on chatgpt',       impressions: 7600,  ctr: 0.31, position: 16.2 },
+    { query: 'seo automation n8n',           impressions: 5100,  ctr: 0.94, position: 9.8 },
+    { query: 'gsc api google sheets',        impressions: 4300,  ctr: 0.70, position: 14.1 }
+  ],
   aeoSources: [
     { name: 'chatgpt.com',           value: 38 },
     { name: 'perplexity.ai',         value: 22 },
@@ -106,7 +121,6 @@ const DEMO_REPORT_DATA = {
     { sourceMedium: 'gemini.google.com / referral',landingPage: '/contact/',          sessions: 8,  engagedSessions: 6,  engagementRate: 75.00, avgEngagementTime: '0m 58s' },
     { sourceMedium: 'claude.ai / referral',        landingPage: '/blog/ai-overview', sessions: 5,  engagedSessions: 4,  engagementRate: 80.00, avgEngagementTime: '3m 02s' }
   ],
-  // countries: values are PERCENTAGES (sum should equal ~100)
   countries: [
     { name: 'India',     value: 72 },
     { name: 'USA',       value: 14 },
@@ -154,16 +168,18 @@ function normalizeReportData(report, params = {}) {
   const data = {
     ...fallback,
     ...incoming,
-    meta:             { ...fallback.meta,             ...(incoming.meta || {}) },
-    sessionsOverTime: { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
-    gscTrend:         { ...fallback.gscTrend,         ...(incoming.gscTrend || {}) },
-    deviceSplit:      Array.isArray(incoming.deviceSplit)      ? incoming.deviceSplit      : fallback.deviceSplit,
-    trafficByChannel: Array.isArray(incoming.trafficByChannel) ? incoming.trafficByChannel : fallback.trafficByChannel,
-    gscKeywords:      Array.isArray(incoming.gscKeywords)      ? incoming.gscKeywords      : fallback.gscKeywords,
-    aeoSources:       Array.isArray(incoming.aeoSources)       ? incoming.aeoSources       : fallback.aeoSources,
-    aeoLandingPages:  Array.isArray(incoming.aeoLandingPages)  ? incoming.aeoLandingPages  : fallback.aeoLandingPages,
-    countries:        Array.isArray(incoming.countries)        ? incoming.countries        : fallback.countries,
-    warnings:         Array.isArray(incoming.warnings)         ? incoming.warnings         : []
+    meta:              { ...fallback.meta,             ...(incoming.meta || {}) },
+    sessionsOverTime:  { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
+    gscTrend:          { ...fallback.gscTrend,         ...(incoming.gscTrend || {}) },
+    deviceSplit:       Array.isArray(incoming.deviceSplit)       ? incoming.deviceSplit       : fallback.deviceSplit,
+    trafficByChannel:  Array.isArray(incoming.trafficByChannel)  ? incoming.trafficByChannel  : fallback.trafficByChannel,
+    topLandingPages:   Array.isArray(incoming.topLandingPages)   ? incoming.topLandingPages   : fallback.topLandingPages,
+    gscKeywords:       Array.isArray(incoming.gscKeywords)       ? incoming.gscKeywords       : fallback.gscKeywords,
+    opportunityQueries:Array.isArray(incoming.opportunityQueries)? incoming.opportunityQueries: fallback.opportunityQueries,
+    aeoSources:        Array.isArray(incoming.aeoSources)        ? incoming.aeoSources        : fallback.aeoSources,
+    aeoLandingPages:   Array.isArray(incoming.aeoLandingPages)   ? incoming.aeoLandingPages   : fallback.aeoLandingPages,
+    countries:         Array.isArray(incoming.countries)         ? incoming.countries         : fallback.countries,
+    warnings:          Array.isArray(incoming.warnings)          ? incoming.warnings          : []
   };
 
   if (params.projectId) {

@@ -76,10 +76,12 @@ function renderDashboard(report) {
   renderMeta(report);
   renderKpis(report);
   renderCharts(report);
-  renderGscKeywordTable(report.gscKeywords  || []);
-  renderAeoTable(report.aeoLandingPages     || []);
-  renderMetricBars('deviceBars',  report.deviceSplit || [], '%');
-  renderMetricBars('countryBars', report.countries   || [], '%');
+  renderGscKeywordTable(report.gscKeywords     || []);
+  renderOpportunityQueries(report.opportunityQueries || []);
+  renderAeoTable(report.aeoLandingPages         || []);
+  renderMetricBars('deviceBars',      report.deviceSplit     || [], '%');
+  renderMetricBars('countryBars',     report.countries       || [], '%');
+  renderLandingPageBars('landingPageBars', report.topLandingPages || []);
   renderInsightBanner(report);
   renderDonutCenter(report);
   renderAeoTotalPill(report);
@@ -115,7 +117,7 @@ function renderInsightBanner(report) {
     insights.push(`${orgPct}% of sessions are organic`);
   }
   const pos = kpis.avgPosition?.value;
-  if (pos)   insights.push(`Average GSC position: ${pos}`);
+  if (pos) insights.push(`Average GSC position: ${pos}`);
 
   text.textContent = insights.join('  ·  ');
   banner.style.display = 'flex';
@@ -219,6 +221,54 @@ function renderGscKeywordTable(items) {
   }).join('');
 }
 
+// ── Opportunity Queries table ─────────────────────────────
+function renderOpportunityQueries(items) {
+  const tbody = document.getElementById('opportunityQueriesBody');
+  if (!tbody) return;
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="opp-empty">No opportunity queries found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = items.map(item => {
+    const pos    = item.position;
+    const posCls = pos <= 10 ? 'pos-top10' : 'pos-out';
+    return `
+    <tr>
+      <td class="opp-query" title="${escHtml(item.query)}">${escHtml(item.query)}</td>
+      <td class="opp-impr">${fmtShort(item.impressions)}</td>
+      <td class="opp-ctr">${formatValue(item.ctr)}%</td>
+      <td class="opp-pos"><span class="pos-badge ${posCls}">${formatValue(item.position)}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Top Landing Pages bars (compact) ─────────────────────
+function renderLandingPageBars(containerId, items) {
+  const el = document.getElementById(containerId);
+  if (!el || !items.length) {
+    if (el) el.innerHTML = `<div class="opp-empty">No landing page data</div>`;
+    return;
+  }
+  const max = Math.max(...items.map(i => i.value), 1);
+  el.innerHTML = items.map((item, idx) => {
+    const pct   = (item.value / max) * 100;
+    const color = BAR_COLORS[idx % BAR_COLORS.length];
+    const label = item.name.replace(/^\//,'').replace(/\/$/,'') || '/';
+    return `
+      <div class="mrow">
+        <span class="mname" title="${escHtml(item.name)}">${escHtml(label || item.name)}</span>
+        <div class="mbar"><div class="mfill" style="width:0%;background:${color}"></div></div>
+        <span class="mval">${fmtShort(item.value)}</span>
+      </div>`;
+  }).join('');
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.mfill').forEach((fill, idx) => {
+      const pct = (items[idx].value / max) * 100;
+      fill.style.width = pct.toFixed(1) + '%';
+    });
+  });
+}
+
 // ── AEO table ─────────────────────────────────────────────
 function renderAeoTable(items) {
   const section = document.getElementById('aeoTableSection');
@@ -248,7 +298,6 @@ function renderMetricBars(containerId, items, suffix) {
   if (!el || !items.length) return;
   const max = Math.max(...items.map(i => i.value), 1);
   el.innerHTML = items.map((item, idx) => {
-    const pct   = (item.value / max) * 100;
     const color = BAR_COLORS[idx % BAR_COLORS.length];
     return `
       <div class="mrow">
@@ -257,7 +306,6 @@ function renderMetricBars(containerId, items, suffix) {
         <span class="mval">${formatValue(item.value)}${suffix || ''}</span>
       </div>`;
   }).join('');
-  // Animate bars in next frame
   requestAnimationFrame(() => {
     el.querySelectorAll('.mfill').forEach((fill, idx) => {
       const pct = (items[idx].value / max) * 100;
