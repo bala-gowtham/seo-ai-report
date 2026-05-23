@@ -52,8 +52,8 @@ const DEFAULT_KPIS = {
 const DEMO_REPORT_DATA = {
   ok: true,
   meta: {
-    projectId:   'repute',
-    projectName: 'Repute',
+    projectId:   'local-seo-client',
+    projectName: 'Local SEO Client',
     from:        '2026-05-01',
     to:          '2026-05-31',
     monthLabel:  'May 2026',
@@ -134,7 +134,6 @@ async function fetchReportData(params) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         projectId: params.projectId,
-        month:     params.month,
         from:      params.from,
         to:        params.to
       })
@@ -178,16 +177,16 @@ function normalizeReportData(report, params = {}) {
     warnings:          Array.isArray(incoming.warnings)          ? incoming.warnings          : []
   };
 
-  if (params.projectId) {
-    data.meta.projectId   = params.projectId;
-    data.meta.projectName = getProjectName(params.projectId);
-  }
+  // Always use the single project
+  data.meta.projectId   = 'local-seo-client';
+  data.meta.projectName = 'Local SEO Client';
+
   if (params.from)  data.meta.from  = params.from;
   if (params.to)    data.meta.to    = params.to;
-  if (params.month) data.meta.month = params.month;
 
-  data.meta.monthLabel  = data.meta.monthLabel  || formatMonthLabel(params.month || data.meta.from);
-  data.meta.sourceLabel = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
+  data.meta.dateRangeLabel = formatDateRangeLabel(data.meta.from, data.meta.to);
+  data.meta.monthLabel     = data.meta.dateRangeLabel;
+  data.meta.sourceLabel    = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
 
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
 
@@ -205,20 +204,15 @@ function mergeKpis(defaultKpis, incomingKpis) {
   return merged;
 }
 
-function getProjectName(projectId) {
-  const names = {
-    'repute':           'Repute',
-    'acme-corp':        'Acme Corp',
-    'techbrand-india':  'TechBrand India',
-    'startupx':         'StartupX',
-    'local-seo-client': 'Local SEO Client'
+function formatDateRangeLabel(from, to) {
+  if (!from && !to) return 'May 2026';
+  const fmt = (dateStr) => {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
-  return names[projectId] || projectId;
-}
-
-function formatMonthLabel(value) {
-  if (!value) return 'May 2026';
-  const parts = value.split('-').map(Number);
-  const date = new Date(parts[0], parts[1] - 1, 1);
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  if (from && to && from !== to) return `${fmt(from)} – ${fmt(to)}`;
+  if (from) return fmt(from);
+  return fmt(to);
 }

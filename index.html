@@ -57,24 +57,25 @@
     <div class="topbar report-topbar">
       <div class="report-heading">
         <div class="page-title">SEO Overview</div>
-        <div class="page-subtitle" id="reportSubtitle">Repute · May 2026 · GA4 · GSC · AEO Signals</div>
+        <div class="page-subtitle" id="reportSubtitle">Local SEO Client · GA4 · GSC · AEO Signals</div>
       </div>
       <div class="report-filter-bar">
         <div class="filter-field project-field">
           <label for="projectSelector">Project</label>
           <select id="projectSelector" class="filter-select">
-            <option value="repute" selected>Repute</option>
-            <option value="acme-corp">Acme Corp</option>
-            <option value="techbrand-india">TechBrand India</option>
-            <option value="startupx">StartupX</option>
-            <option value="local-seo-client">Local SEO Client</option>
+            <option value="local-seo-client" selected>Local SEO Client</option>
           </select>
           <div class="export-field-value" id="exportProjectValue"></div>
         </div>
-        <div class="filter-field month-field">
-          <label for="monthSelector">Month</label>
-          <input type="month" id="monthSelector" class="filter-month" />
-          <div class="export-field-value" id="exportMonthValue"></div>
+        <div class="filter-field">
+          <label for="fromDateSelector">From</label>
+          <input type="date" id="fromDateSelector" class="filter-date" />
+          <div class="export-field-value" id="exportFromValue"></div>
+        </div>
+        <div class="filter-field">
+          <label for="toDateSelector">To</label>
+          <input type="date" id="toDateSelector" class="filter-date" />
+          <div class="export-field-value" id="exportToValue"></div>
         </div>
         <button class="btn-submit" id="submitReportBtn" type="button">Generate Report</button>
         <button class="btn-export" id="exportBtn" type="button">
@@ -111,7 +112,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           <span class="section-label">Performance KPIs</span>
         </div>
-        <span class="section-desc">Current month vs previous month</span>
+        <span class="section-desc">Current period vs previous period</span>
       </div>
       <section class="kpi-grid" aria-label="KPI summary">
         <!-- Row 1: GA4 KPIs -->

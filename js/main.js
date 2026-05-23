@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function () {
   createCharts();
   initReportControls();
-  setDefaultMonth();
+  setDefaultDates();
 
   // Load demo data on page open so the dashboard is presentable.
   // Do NOT call reloadReport() here because that calls n8n.

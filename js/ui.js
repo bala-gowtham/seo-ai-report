@@ -10,28 +10,28 @@ function loadDemoPreview() {
 
 // ── Filters ───────────────────────────────────────────────
 function getCurrentFilters() {
-  const projectId  = document.getElementById('projectSelector')?.value || 'repute';
-  const monthValue = document.getElementById('monthSelector')?.value   || getCurrentMonth();
-  const { from, to } = monthToDateRange(monthValue);
-  return { projectId, month: monthValue, from, to };
+  const projectId = 'local-seo-client';
+  const from      = document.getElementById('fromDateSelector')?.value || getDefaultFrom();
+  const to        = document.getElementById('toDateSelector')?.value   || getDefaultTo();
+  return { projectId, from, to };
 }
 
-function getCurrentMonth() {
+function getDefaultFrom() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
 }
 
-function monthToDateRange(monthValue) {
-  const [year, month] = monthValue.split('-').map(Number);
-  const from    = `${year}-${String(month).padStart(2,'0')}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const to      = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
-  return { from, to };
+function getDefaultTo() {
+  const d = new Date();
+  const lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
 }
 
-function setDefaultMonth() {
-  const el = document.getElementById('monthSelector');
-  if (el) el.value = getCurrentMonth();
+function setDefaultDates() {
+  const fromEl = document.getElementById('fromDateSelector');
+  const toEl   = document.getElementById('toDateSelector');
+  if (fromEl) fromEl.value = getDefaultFrom();
+  if (toEl)   toEl.value   = getDefaultTo();
 }
 
 // ── Controls ──────────────────────────────────────────────
@@ -43,6 +43,18 @@ function initReportControls() {
   if (navExport) navExport.addEventListener('click', () => {
     document.getElementById('exportBtn')?.click();
   });
+
+  // Guard: from date cannot be after to date
+  const fromEl = document.getElementById('fromDateSelector');
+  const toEl   = document.getElementById('toDateSelector');
+  if (fromEl && toEl) {
+    fromEl.addEventListener('change', () => {
+      if (toEl.value && fromEl.value > toEl.value) toEl.value = fromEl.value;
+    });
+    toEl.addEventListener('change', () => {
+      if (fromEl.value && toEl.value < fromEl.value) fromEl.value = toEl.value;
+    });
+  }
 }
 
 async function reloadReport() {
@@ -89,8 +101,9 @@ function renderDashboard(report) {
 function renderMeta(report) {
   const meta     = report.meta || {};
   const subtitle = document.getElementById('reportSubtitle');
+  const label    = meta.dateRangeLabel || meta.monthLabel || '';
   if (subtitle) subtitle.textContent =
-    `${meta.projectName || meta.projectId || 'Project'} · ${meta.monthLabel || ''} · ${meta.sourceLabel || 'GA4 · GSC · AEO Signals'}`;
+    `${meta.projectName || 'Local SEO Client'} · ${label} · ${meta.sourceLabel || 'GA4 · GSC · AEO Signals'}`;
 }
 
 // ── Insight banner ────────────────────────────────────────
@@ -105,7 +118,7 @@ function renderInsightBanner(report) {
 
   if (meta.from && meta.to) {
     const days = Math.round((new Date(meta.to) - new Date(meta.from)) / 86400000) + 1;
-    insights.push(`Report covers ${meta.monthLabel || meta.from} · ${days} days`);
+    insights.push(`Report covers ${meta.dateRangeLabel || meta.from} · ${days} days`);
   }
   const totalUsers = kpis.totalUsers?.value;
   if (totalUsers) insights.push(`Total users this period: ${totalUsers.toLocaleString()}`);
@@ -306,9 +319,11 @@ function renderMetricBars(containerId, items, suffix) {
 function syncExportControls(report) {
   const meta    = report?.meta || {};
   const projEl  = document.getElementById('exportProjectValue');
-  const monthEl = document.getElementById('exportMonthValue');
-  if (projEl)  projEl.textContent  = meta.projectName || meta.projectId || '';
-  if (monthEl) monthEl.textContent = meta.monthLabel || '';
+  const fromEl  = document.getElementById('exportFromValue');
+  const toEl    = document.getElementById('exportToValue');
+  if (projEl)  projEl.textContent  = meta.projectName || 'Local SEO Client';
+  if (fromEl)  fromEl.textContent  = meta.from || '';
+  if (toEl)    toEl.textContent    = meta.to   || '';
 }
 
 // ── Formatters ────────────────────────────────────────────
