@@ -16,16 +16,16 @@ const REPORT_CONFIG = {
     GSC API returns a decimal ratio (0.052). In n8n: ctr: row.ctr * 100
 
   deviceSplit[].value:
-    Must be a PERCENTAGE (0–100), not raw sessions.
-
-  countries[].value:
-    Must be a PERCENTAGE (0–100), not raw sessions.
+    Raw session count (used for doughnut proportions + legend %).
 
   aeoSources[].value:
     Raw session count (used for doughnut proportions).
 
   topLandingPages[].value:
     Raw organic session count for bar proportion.
+
+  aeoLandingPages[].sessions:
+    Raw AI referral session count per landing page.
 
   opportunityQueries:
     High impressions, low CTR, reachable position.
@@ -39,14 +39,14 @@ const REPORT_CONFIG = {
 */
 
 const DEFAULT_KPIS = {
-  totalSessions:   { value: 24816, change: 12.4,  suffix: '',  changeSuffix: '%' },
-  organicSessions: { value: 18620, change: 9.7,   suffix: '',  changeSuffix: '%' },
+  totalUsers:      { value: 19840, change: 10.2,  suffix: '',  changeSuffix: '%' },
+  totalPageViews:  { value: 68420, change: 13.5,  suffix: '',  changeSuffix: '%' },
+  conversions:     { value: 186,   change: 14.9,  suffix: '',  changeSuffix: '%' },
+  aiTraffic:       { value: 88,    change: 22.2,  suffix: '',  changeSuffix: '%' },
   gscClicks:       { value: 9340,  change: 8.1,   suffix: '',  changeSuffix: '%' },
   gscImpressions:  { value: 163400,change: 11.6,  suffix: '',  changeSuffix: '%' },
   avgCtr:          { value: 5.7,   change: 0.4,   suffix: '%', changeSuffix: ' pp' },
-  avgPosition:     { value: 14.2,  change: -2.3,  suffix: '',  changeSuffix: ' pos', betterWhenDown: true },
-  engagementRate:  { value: 61.2,  change: 4.8,   suffix: '%', changeSuffix: ' pp' },
-  conversions:     { value: 186,   change: 14.9,  suffix: '',  changeSuffix: '%' }
+  keywordsTop10:   { value: 47,    change: 5,     suffix: '',  changeSuffix: '' }
 };
 
 const DEMO_REPORT_DATA = {
@@ -66,9 +66,9 @@ const DEMO_REPORT_DATA = {
     previous: [2200, 2650, 2410, 2900, 2760, 3100, 2940]
   },
   deviceSplit: [
-    { name: 'Desktop', value: 68 },
-    { name: 'Mobile',  value: 26 },
-    { name: 'Tablet',  value: 6 }
+    { name: 'Desktop', value: 16884 },
+    { name: 'Mobile',  value: 6452 },
+    { name: 'Tablet',  value: 1490 }
   ],
   trafficByChannel: [
     { name: 'Organic Search', value: 12400 },
@@ -78,7 +78,6 @@ const DEMO_REPORT_DATA = {
     { name: 'Social',         value: 1200 },
     { name: 'Email',          value: 716 }
   ],
-  // topLandingPages: value is organic session count
   topLandingPages: [
     { name: '/services/seo/',          value: 3840 },
     { name: '/blog/seo-automation/',   value: 2610 },
@@ -91,7 +90,6 @@ const DEMO_REPORT_DATA = {
     impressions: [18400, 21200, 19800, 23400, 22100, 25600, 24200],
     clicks:      [1040,  1280,  1120,  1440,  1320,  1580,  1460]
   },
-  // ctr is PERCENTAGE (multiply GSC decimal ratio × 100 in n8n)
   gscKeywords: [
     { query: 'seo agency india',             clicks: 420, impressions: 8200, ctr: 5.12, position: 3.4 },
     { query: 'digital marketing coimbatore', clicks: 290, impressions: 5900, ctr: 4.92, position: 4.1 },
@@ -99,8 +97,6 @@ const DEMO_REPORT_DATA = {
     { query: 'ai seo tools 2026',            clicks: 130, impressions: 6100, ctr: 2.13, position: 9.2 },
     { query: 'rank tracking software',       clicks: 98,  impressions: 3800, ctr: 2.58, position: 7.8 }
   ],
-  // opportunityQueries: high impressions, low CTR — AEO/content optimization targets
-  // ctr is PERCENTAGE
   opportunityQueries: [
     { query: 'best seo tools 2026',          impressions: 14200, ctr: 0.62, position: 11.4 },
     { query: 'ai overview seo strategy',     impressions: 9800,  ctr: 0.48, position: 13.7 },
@@ -116,10 +112,10 @@ const DEMO_REPORT_DATA = {
     { name: 'copilot.microsoft.com', value: 5 }
   ],
   aeoLandingPages: [
-    { sourceMedium: 'chatgpt.com / referral',      landingPage: '/services/seo',     sessions: 16, engagedSessions: 13, engagementRate: 81.25, avgEngagementTime: '2m 14s' },
-    { sourceMedium: 'perplexity.ai / referral',    landingPage: '/blog/seo-auto',    sessions: 12, engagedSessions: 9,  engagementRate: 75.00, avgEngagementTime: '1m 52s' },
-    { sourceMedium: 'gemini.google.com / referral',landingPage: '/contact/',          sessions: 8,  engagedSessions: 6,  engagementRate: 75.00, avgEngagementTime: '0m 58s' },
-    { sourceMedium: 'claude.ai / referral',        landingPage: '/blog/ai-overview', sessions: 5,  engagedSessions: 4,  engagementRate: 80.00, avgEngagementTime: '3m 02s' }
+    { sourceMedium: 'chatgpt.com / referral',       landingPage: '/services/seo',     sessions: 16, engagedSessions: 13, engagementRate: 81.25, avgEngagementTime: '2m 14s' },
+    { sourceMedium: 'perplexity.ai / referral',     landingPage: '/blog/seo-auto',    sessions: 12, engagedSessions: 9,  engagementRate: 75.00, avgEngagementTime: '1m 52s' },
+    { sourceMedium: 'gemini.google.com / referral', landingPage: '/contact/',          sessions: 8,  engagedSessions: 6,  engagementRate: 75.00, avgEngagementTime: '0m 58s' },
+    { sourceMedium: 'claude.ai / referral',         landingPage: '/blog/ai-overview', sessions: 5,  engagedSessions: 4,  engagementRate: 80.00, avgEngagementTime: '3m 02s' }
   ],
   countries: [
     { name: 'India',     value: 72 },

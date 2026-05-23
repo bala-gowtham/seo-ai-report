@@ -114,53 +114,55 @@
         <span class="section-desc">Current month vs previous month</span>
       </div>
       <section class="kpi-grid" aria-label="KPI summary">
+        <!-- Row 1: GA4 KPIs -->
         <div class="kpi-card" style="--card-color:#ff6b35">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Total Sessions</div><div class="kpi-dot"></div></div>
-          <div class="kpi-value" data-kpi="totalSessions">—</div>
-          <div class="kpi-change" data-kpi-change="totalSessions">—</div>
+          <div class="kpi-top"><div class="kpi-label">Total Users</div><div class="kpi-dot"></div></div>
+          <div class="kpi-value" data-kpi="totalUsers">—</div>
+          <div class="kpi-change" data-kpi-change="totalUsers">—</div>
         </div>
         <div class="kpi-card" style="--card-color:#ff9a6b">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Organic Sessions</div><div class="kpi-dot"></div></div>
-          <div class="kpi-value" data-kpi="organicSessions">—</div>
-          <div class="kpi-change" data-kpi-change="organicSessions">—</div>
+          <div class="kpi-top"><div class="kpi-label">Total Page Views</div><div class="kpi-dot"></div></div>
+          <div class="kpi-value" data-kpi="totalPageViews">—</div>
+          <div class="kpi-change" data-kpi-change="totalPageViews">—</div>
         </div>
+        <div class="kpi-card" style="--card-color:#ec4899">
+          <div class="kpi-glow"></div>
+          <div class="kpi-top"><div class="kpi-label">Total Conversions</div><div class="kpi-dot"></div></div>
+          <div class="kpi-value" data-kpi="conversions">—</div>
+          <div class="kpi-change" data-kpi-change="conversions">—</div>
+        </div>
+        <div class="kpi-card" style="--card-color:#8b5cf6">
+          <div class="kpi-glow"></div>
+          <div class="kpi-top"><div class="kpi-label">Total AI Traffic</div><div class="kpi-dot"></div></div>
+          <div class="kpi-value" data-kpi="aiTraffic">—</div>
+          <div class="kpi-change" data-kpi-change="aiTraffic">—</div>
+        </div>
+        <!-- Row 2: GSC KPIs -->
         <div class="kpi-card" style="--card-color:#22c55e">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">GSC Clicks</div><div class="kpi-dot"></div></div>
+          <div class="kpi-top"><div class="kpi-label">Google Search Clicks</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="gscClicks">—</div>
           <div class="kpi-change" data-kpi-change="gscClicks">—</div>
         </div>
         <div class="kpi-card" style="--card-color:#3b82f6">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">GSC Impressions</div><div class="kpi-dot"></div></div>
+          <div class="kpi-top"><div class="kpi-label">Search Impressions</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="gscImpressions">—</div>
           <div class="kpi-change" data-kpi-change="gscImpressions">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#8b5cf6">
+        <div class="kpi-card" style="--card-color:#14b8a6">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Avg. CTR</div><div class="kpi-dot"></div></div>
+          <div class="kpi-top"><div class="kpi-label">Average CTR</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="avgCtr">—</div>
           <div class="kpi-change" data-kpi-change="avgCtr">—</div>
         </div>
         <div class="kpi-card" style="--card-color:#f59e0b">
           <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Avg. Position</div><div class="kpi-dot"></div></div>
-          <div class="kpi-value" data-kpi="avgPosition">—</div>
-          <div class="kpi-change" data-kpi-change="avgPosition">—</div>
-        </div>
-        <div class="kpi-card" style="--card-color:#14b8a6">
-          <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Engagement Rate</div><div class="kpi-dot"></div></div>
-          <div class="kpi-value" data-kpi="engagementRate">—</div>
-          <div class="kpi-change" data-kpi-change="engagementRate">—</div>
-        </div>
-        <div class="kpi-card" style="--card-color:#ec4899">
-          <div class="kpi-glow"></div>
-          <div class="kpi-top"><div class="kpi-label">Conversions</div><div class="kpi-dot"></div></div>
-          <div class="kpi-value" data-kpi="conversions">—</div>
-          <div class="kpi-change" data-kpi-change="conversions">—</div>
+          <div class="kpi-top"><div class="kpi-label">Keywords in Top 10</div><div class="kpi-dot"></div></div>
+          <div class="kpi-value" data-kpi="keywordsTop10">—</div>
+          <div class="kpi-change" data-kpi-change="keywordsTop10">—</div>
         </div>
       </section>
 
@@ -197,13 +199,7 @@
             </div>
             <span class="tag tag-sky">GA4</span>
           </div>
-          <div class="device-layout">
-            <div class="device-chart-wrap">
-              <canvas id="devChart"></canvas>
-              <div class="donut-center" id="donutCenter"><span id="donutTotal">—</span><small>sessions</small></div>
-            </div>
-            <div class="metric-list" id="deviceBars"></div>
-          </div>
+          <canvas id="devChart" style="max-height:200px"></canvas>
         </div>
 
         <!-- Traffic by Channel -->
@@ -218,7 +214,7 @@
           <canvas id="chanChart" style="max-height:210px"></canvas>
         </div>
 
-        <!-- Top Landing Pages (NEW) -->
+        <!-- Top Landing Pages -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -285,7 +281,7 @@
         </div>
       </section>
 
-      <!-- ── Row 5: AEO Sources · Top Countries · Opportunity Queries (3-col) ── -->
+      <!-- ── Row 5: AEO Sources · AI Sources · Top Landing Page AI Sessions (3-col) ── -->
       <div class="section-header">
         <div class="section-header-left">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="19" cy="5" r="3" fill="currentColor"/></svg>
@@ -310,70 +306,41 @@
           <canvas id="aeoChart" style="max-height:200px"></canvas>
         </div>
 
-        <!-- Top Countries -->
+        <!-- AI Sources Table (replaces Top Countries) -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
-              <div class="chart-title">Top Countries</div>
-              <div class="chart-subtitle">Sessions by geography · GA4</div>
-            </div>
-            <span class="tag tag-sky">GA4</span>
-          </div>
-          <div class="metric-list" id="countryBars"></div>
-        </div>
-
-        <!-- Opportunity Queries (NEW) -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">Opportunity Queries</div>
-              <div class="chart-subtitle">High impressions · low CTR · GSC</div>
-            </div>
-            <span class="tag tag-amber">GSC</span>
-          </div>
-          <div id="opportunityQueriesWrap">
-            <table class="data-table opp-table">
-              <thead>
-                <tr>
-                  <th>Query</th>
-                  <th style="text-align:right">Impr.</th>
-                  <th style="text-align:right">CTR</th>
-                  <th style="text-align:right">Pos</th>
-                </tr>
-              </thead>
-              <tbody id="opportunityQueriesBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- AEO landing pages detail table -->
-      <section class="charts-row" id="aeoTableSection" style="margin-bottom:18px;display:none">
-        <div class="chart-card chart-card-full">
-          <div class="chart-header">
-            <div>
-              <div class="chart-title">AEO Landing Page Detail</div>
-              <div class="chart-subtitle">Pages receiving AI referral traffic · engagement breakdown</div>
+              <div class="chart-title">AI Sources</div>
+              <div class="chart-subtitle">AI source and AI session count · AEO</div>
             </div>
             <span class="tag tag-violet">AEO</span>
           </div>
-          <div class="table-scroll" id="aeoTableWrap">
-            <table class="data-table aeo-table">
+          <div class="table-scroll">
+            <table class="data-table aeo-sources-table">
               <thead>
                 <tr>
-                  <th>Source / Medium</th>
-                  <th>Landing Page</th>
+                  <th>#</th>
+                  <th>AI Source</th>
                   <th style="text-align:right">Sessions</th>
-                  <th style="text-align:right">Engaged</th>
-                  <th style="text-align:right">Eng Rate</th>
-                  <th style="text-align:right">Avg Time</th>
                 </tr>
               </thead>
-              <tbody id="aeoTableBody"></tbody>
+              <tbody id="aiSourcesTableBody"></tbody>
             </table>
           </div>
         </div>
+
+        <!-- Top Landing Page AI Sessions (replaces Opportunity Queries) -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Top Landing Page AI Sessions</div>
+              <div class="chart-subtitle">Landing pages by AI referral sessions · AEO</div>
+            </div>
+            <span class="tag tag-violet">AEO</span>
+          </div>
+          <div id="aiLandingPageBars" class="metric-list compact-list"></div>
+        </div>
+
       </section>
 
     </div><!-- end #dashboardContent -->

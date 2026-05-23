@@ -97,7 +97,7 @@ function createSessionsChart() {
   });
 }
 
-// ── Device Doughnut ───────────────────────────────────────
+// ── Device Doughnut — matches AEO chart style ─────────────
 function createDeviceChart() {
   const canvas = document.getElementById('devChart');
   if (!canvas) return null;
@@ -112,14 +112,23 @@ function createDeviceChart() {
       }]
     },
     options: {
-      responsive: false,
-      maintainAspectRatio: false,
-      cutout: '74%',
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '60%',
       plugins: {
-        legend: { display: false },
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 8, boxHeight: 8, padding: 10, font: { size: 10 } }
+        },
         tooltip: {
           ...tooltipOptions(),
-          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}%` }
+          callbacks: {
+            label: ctx => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct   = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+              return ` ${ctx.label}: ${ctx.raw.toLocaleString()} (${pct}%)`;
+            }
+          }
         }
       }
     }

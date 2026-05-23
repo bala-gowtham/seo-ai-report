@@ -76,14 +76,11 @@ function renderDashboard(report) {
   renderMeta(report);
   renderKpis(report);
   renderCharts(report);
-  renderGscKeywordTable(report.gscKeywords     || []);
-  renderOpportunityQueries(report.opportunityQueries || []);
-  renderAeoTable(report.aeoLandingPages         || []);
-  renderMetricBars('deviceBars',      report.deviceSplit     || [], '%');
-  renderMetricBars('countryBars',     report.countries       || [], '%');
+  renderGscKeywordTable(report.gscKeywords          || []);
+  renderAiSourcesTable(report.aeoSources            || []);
+  renderAiLandingPageBars('aiLandingPageBars', report.aeoLandingPages || []);
   renderLandingPageBars('landingPageBars', report.topLandingPages || []);
   renderInsightBanner(report);
-  renderDonutCenter(report);
   renderAeoTotalPill(report);
   renderFooter(report);
   syncExportControls(report);
@@ -102,33 +99,21 @@ function renderInsightBanner(report) {
   const text   = document.getElementById('insightBannerText');
   if (!banner || !text) return;
 
-  const meta    = report.meta || {};
-  const kpis    = report.kpis || {};
+  const meta     = report.meta || {};
+  const kpis     = report.kpis || {};
   const insights = [];
 
   if (meta.from && meta.to) {
     const days = Math.round((new Date(meta.to) - new Date(meta.from)) / 86400000) + 1;
     insights.push(`Report covers ${meta.monthLabel || meta.from} · ${days} days`);
   }
-  const total   = kpis.totalSessions?.value;
-  const organic = kpis.organicSessions?.value;
-  if (total && organic) {
-    const orgPct = Math.round((organic / total) * 100);
-    insights.push(`${orgPct}% of sessions are organic`);
-  }
-  const pos = kpis.avgPosition?.value;
-  if (pos) insights.push(`Average GSC position: ${pos}`);
+  const totalUsers = kpis.totalUsers?.value;
+  if (totalUsers) insights.push(`Total users this period: ${totalUsers.toLocaleString()}`);
+  const aiTraffic = kpis.aiTraffic?.value;
+  if (aiTraffic) insights.push(`AI referral sessions: ${aiTraffic.toLocaleString()}`);
 
   text.textContent = insights.join('  ·  ');
   banner.style.display = 'flex';
-}
-
-// ── Donut center total ────────────────────────────────────
-function renderDonutCenter(report) {
-  const el = document.getElementById('donutTotal');
-  if (!el) return;
-  const total = report.kpis?.totalSessions?.value;
-  el.textContent = total ? fmtShort(total) : '—';
 }
 
 // ── AEO pill total ────────────────────────────────────────
@@ -221,25 +206,47 @@ function renderGscKeywordTable(items) {
   }).join('');
 }
 
-// ── Opportunity Queries table ─────────────────────────────
-function renderOpportunityQueries(items) {
-  const tbody = document.getElementById('opportunityQueriesBody');
+// ── AI Sources table ──────────────────────────────────────
+function renderAiSourcesTable(items) {
+  const tbody = document.getElementById('aiSourcesTableBody');
   if (!tbody) return;
   if (!items.length) {
-    tbody.innerHTML = `<tr><td colspan="4" class="opp-empty">No opportunity queries found</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" class="opp-empty">No AI source data available</td></tr>`;
     return;
   }
-  tbody.innerHTML = items.map(item => {
-    const pos    = item.position;
-    const posCls = pos <= 10 ? 'pos-top10' : 'pos-out';
-    return `
+  tbody.innerHTML = items.map((item, idx) => `
     <tr>
-      <td class="opp-query" title="${escHtml(item.query)}">${escHtml(item.query)}</td>
-      <td class="opp-impr">${fmtShort(item.impressions)}</td>
-      <td class="opp-ctr">${formatValue(item.ctr)}%</td>
-      <td class="opp-pos"><span class="pos-badge ${posCls}">${formatValue(item.position)}</span></td>
-    </tr>`;
+      <td class="row-num">${idx + 1}</td>
+      <td style="font-weight:500;color:var(--text-primary)">${escHtml(item.name)}</td>
+      <td class="num-cell">${formatInt(item.value)}</td>
+    </tr>`).join('');
+}
+
+// ── AI Landing Page bars (like Top Landing Pages) ─────────
+function renderAiLandingPageBars(containerId, items) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = `<div class="opp-empty">No AI landing page data</div>`;
+    return;
+  }
+  const max = Math.max(...items.map(i => i.sessions || 0), 1);
+  el.innerHTML = items.map((item, idx) => {
+    const color = BAR_COLORS[idx % BAR_COLORS.length];
+    const label = (item.landingPage || '').replace(/^\//,'').replace(/\/$/,'') || '/';
+    return `
+      <div class="mrow">
+        <span class="mname" title="${escHtml(item.landingPage)}">${escHtml(label || item.landingPage)}</span>
+        <div class="mbar"><div class="mfill" style="width:0%;background:${color}"></div></div>
+        <span class="mval">${fmtShort(item.sessions || 0)}</span>
+      </div>`;
   }).join('');
+  requestAnimationFrame(() => {
+    el.querySelectorAll('.mfill').forEach((fill, idx) => {
+      const pct = ((items[idx].sessions || 0) / max) * 100;
+      fill.style.width = pct.toFixed(1) + '%';
+    });
+  });
 }
 
 // ── Top Landing Pages bars (compact) ─────────────────────
@@ -251,7 +258,6 @@ function renderLandingPageBars(containerId, items) {
   }
   const max = Math.max(...items.map(i => i.value), 1);
   el.innerHTML = items.map((item, idx) => {
-    const pct   = (item.value / max) * 100;
     const color = BAR_COLORS[idx % BAR_COLORS.length];
     const label = item.name.replace(/^\//,'').replace(/\/$/,'') || '/';
     return `
@@ -269,25 +275,7 @@ function renderLandingPageBars(containerId, items) {
   });
 }
 
-// ── AEO table ─────────────────────────────────────────────
-function renderAeoTable(items) {
-  const section = document.getElementById('aeoTableSection');
-  const tbody   = document.getElementById('aeoTableBody');
-  if (!tbody) return;
-  if (!items.length) { if (section) section.style.display = 'none'; return; }
-  if (section) section.style.display = '';
-  tbody.innerHTML = items.map(item => `
-    <tr>
-      <td>${escHtml(item.sourceMedium)}</td>
-      <td class="url-cell">${escHtml(item.landingPage)}</td>
-      <td class="num-cell">${formatInt(item.sessions)}</td>
-      <td class="num-cell">${formatInt(item.engagedSessions)}</td>
-      <td class="num-cell">${formatValue(item.engagementRate)}%</td>
-      <td class="num-cell">${escHtml(item.avgEngagementTime)}</td>
-    </tr>`).join('');
-}
-
-// ── Metric bars ───────────────────────────────────────────
+// ── Metric bars (generic) ─────────────────────────────────
 const BAR_COLORS = [
   'var(--accent-orange)','var(--accent-sky)',
   'var(--accent-violet)','var(--accent-amber)','var(--accent-teal)'
