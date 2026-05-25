@@ -97,7 +97,7 @@ function createSessionsChart() {
   });
 }
 
-// ── Device Doughnut — matches AEO chart style ─────────────
+// ── Device Doughnut ───────────────────────────────────────
 function createDeviceChart() {
   const canvas = document.getElementById('devChart');
   if (!canvas) return null;
@@ -203,10 +203,31 @@ function createGscChart() {
   });
 }
 
-// ── AEO Doughnut ──────────────────────────────────────────
+// ── AEO Doughnut — with no-data empty state ───────────────
 function createAeoChart() {
   const canvas = document.getElementById('aeoChart');
   if (!canvas) return null;
+
+  // Custom plugin: show empty state message when chart has no data
+  const noDataPlugin = {
+    id: 'aeoNoData',
+    afterDraw(chart) {
+      const total = chart.data.datasets[0]?.data?.reduce((a, b) => a + b, 0) || 0;
+      if (total > 0) return;
+      const { ctx, chartArea } = chart;
+      if (!chartArea) return;
+      ctx.save();
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font         = '12px Inter, sans-serif';
+      ctx.fillStyle    = '#9ca3af';
+      const cx = (chartArea.left + chartArea.right) / 2;
+      const cy = (chartArea.top  + chartArea.bottom) / 2;
+      ctx.fillText('No AI referral sessions available', cx, cy);
+      ctx.restore();
+    }
+  };
+
   return new Chart(canvas, {
     type: 'doughnut',
     data: {
@@ -227,7 +248,8 @@ function createAeoChart() {
         },
         tooltip: tooltipOptions()
       }
-    }
+    },
+    plugins: [noDataPlugin]
   });
 }
 

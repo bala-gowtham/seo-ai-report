@@ -13,26 +13,33 @@ async function loadClientOptions() {
   const select = document.getElementById('projectSelector');
   if (!select) return;
 
-  select.innerHTML = '<option value="" disabled selected>Loading clients\u2026</option>';
+  select.innerHTML = '<option value="" disabled>Loading clients\u2026</option>';
   select.disabled = true;
+
+  // Always insert Demo Data as the first option
+  const demoOption = document.createElement('option');
+  demoOption.value    = 'demo';
+  demoOption.textContent = 'Demo Data';
+  demoOption.selected = true;
 
   try {
     const clients = await fetchClientList();
 
-    if (!clients.length) {
-      select.innerHTML = '<option value="" disabled selected>No active clients found</option>';
-      select.disabled = false;
-      return;
-    }
+    select.innerHTML = '';
+    select.appendChild(demoOption);
 
-    select.innerHTML = clients.map((client, idx) =>
-      `<option value="${client.clientId}"${idx === 0 ? ' selected' : ''}>${client.clientName}</option>`
-    ).join('');
+    clients.forEach(client => {
+      const opt = document.createElement('option');
+      opt.value       = client.clientId;
+      opt.textContent = client.clientName;
+      select.appendChild(opt);
+    });
+
     select.disabled = false;
   } catch (err) {
     console.warn('Client list load failed (using demo mode):', err);
-    // Fallback: show a single demo option so the UI is still usable
-    select.innerHTML = '<option value="local-seo-client" selected>Local SEO Client (demo)</option>';
+    select.innerHTML = '';
+    select.appendChild(demoOption);
     select.disabled = false;
   }
 }
@@ -40,7 +47,7 @@ async function loadClientOptions() {
 // ── Filters ───────────────────────────────────────────────
 function getCurrentFilters() {
   const select    = document.getElementById('projectSelector');
-  const projectId = select?.value || '';
+  const projectId = select?.value || 'demo';
   const from      = document.getElementById('fromDateSelector')?.value || getDefaultFrom();
   const to        = document.getElementById('toDateSelector')?.value   || getDefaultTo();
   return { projectId, from, to };
@@ -94,8 +101,9 @@ async function reloadReport() {
 
   const filters = getCurrentFilters();
 
-  if (!filters.projectId) {
-    alert('Please select a client from the Project dropdown.');
+  // If Demo Data selected, just reload demo preview
+  if (!filters.projectId || filters.projectId === 'demo') {
+    loadDemoPreview();
     return;
   }
 
@@ -138,7 +146,7 @@ function renderMeta(report) {
   const subtitle = document.getElementById('reportSubtitle');
   const label    = meta.dateRangeLabel || meta.monthLabel || '';
   if (subtitle) subtitle.textContent =
-    `${meta.projectName || 'Local SEO Client'} \u00b7 ${label} \u00b7 ${meta.sourceLabel || 'GA4 \u00b7 GSC \u00b7 AEO Signals'}`;
+    `${meta.projectName || 'Demo Data'} \u00b7 ${label} \u00b7 ${meta.sourceLabel || 'GA4 \u00b7 GSC \u00b7 AEO Signals'}`;
 }
 
 // ── Insight banner ────────────────────────────────────────
@@ -354,7 +362,7 @@ function syncExportControls(report) {
   const projEl  = document.getElementById('exportProjectValue');
   const fromEl  = document.getElementById('exportFromValue');
   const toEl    = document.getElementById('exportToValue');
-  if (projEl)  projEl.textContent  = meta.projectName || 'Local SEO Client';
+  if (projEl)  projEl.textContent  = meta.projectName || 'Demo Data';
   if (fromEl)  fromEl.textContent  = meta.from || '';
   if (toEl)    toEl.textContent    = meta.to   || '';
 }
