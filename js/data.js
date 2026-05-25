@@ -35,6 +35,12 @@ const REPORT_CONFIG = {
   aeoLandingPages[]:  { sourceMedium, landingPage, sessions, ... }
   countries[]:        { name, value }
 
+  meta.comparisonMode:
+    'previous_calendar_month' — selected range is a full calendar month;
+                                comparison is previous calendar month (e.g. Apr vs May)
+    'previous_equal_length_period' — custom date range;
+                                comparison is the immediately preceding equal-length period
+
   CORS headers required from n8n:
     Access-Control-Allow-Origin: *
     Access-Control-Allow-Headers: Content-Type
@@ -56,12 +62,15 @@ const DEFAULT_KPIS = {
 const DEMO_REPORT_DATA = {
   ok: true,
   meta: {
-    projectId:   'local-seo-client',
-    projectName: 'Local SEO Client',
-    from:        '2026-05-01',
-    to:          '2026-05-31',
-    monthLabel:  'May 2026',
-    sourceLabel: 'GA4 · GSC · AEO Signals'
+    projectId:      'local-seo-client',
+    projectName:    'Local SEO Client',
+    from:           '2026-05-01',
+    to:             '2026-05-31',
+    prevFrom:       '2026-04-01',
+    prevTo:         '2026-04-30',
+    comparisonMode: 'previous_calendar_month',
+    monthLabel:     'May 2026',
+    sourceLabel:    'GA4 · GSC · AEO Signals'
   },
   kpis: {
     totalUsers:      { value: 19840, change: 10.2,  suffix: '',  changeSuffix: '%' },
@@ -197,6 +206,13 @@ function normalizeReportData(report, params = {}) {
   if (params.from) data.meta.from = params.from;
   if (params.to)   data.meta.to   = params.to;
 
+  // Preserve comparisonMode from live response; fall back to 'previous_equal_length_period'
+  data.meta.comparisonMode = incoming.meta?.comparisonMode || 'previous_equal_length_period';
+
+  // Preserve prevFrom / prevTo from live response if available
+  if (incoming.meta?.prevFrom) data.meta.prevFrom = incoming.meta.prevFrom;
+  if (incoming.meta?.prevTo)   data.meta.prevTo   = incoming.meta.prevTo;
+
   data.meta.dateRangeLabel = formatDateRangeLabel(data.meta.from, data.meta.to);
   data.meta.monthLabel     = data.meta.dateRangeLabel;
   data.meta.sourceLabel    = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
@@ -233,4 +249,17 @@ function formatDateRangeLabel(from, to) {
   if (from && to && from !== to) return `${fmt(from)} \u2013 ${fmt(to)}`;
   if (from) return fmt(from);
   return fmt(to);
+}
+
+/**
+ * Returns a human-readable comparison label based on comparisonMode.
+ * Used by KPI cards and insight banner.
+ *
+ * 'previous_calendar_month' → 'vs previous month'
+ * 'previous_equal_length_period' → 'vs previous period'
+ */
+function getComparisonLabel(comparisonMode) {
+  return comparisonMode === 'previous_calendar_month'
+    ? 'vs previous month'
+    : 'vs previous period';
 }

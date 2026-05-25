@@ -63,7 +63,7 @@ async function reloadReport() {
   const error     = document.getElementById('errorState');
   const content   = document.getElementById('dashboardContent');
 
-  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Loading…'; }
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Loading\u2026'; }
   if (loading)   loading.style.display = 'flex';
   if (error)     error.style.display   = 'none';
   if (content)   content.style.opacity = '0.4';
@@ -103,7 +103,7 @@ function renderMeta(report) {
   const subtitle = document.getElementById('reportSubtitle');
   const label    = meta.dateRangeLabel || meta.monthLabel || '';
   if (subtitle) subtitle.textContent =
-    `${meta.projectName || 'Local SEO Client'} · ${label} · ${meta.sourceLabel || 'GA4 · GSC · AEO Signals'}`;
+    `${meta.projectName || 'Local SEO Client'} \u00b7 ${label} \u00b7 ${meta.sourceLabel || 'GA4 \u00b7 GSC \u00b7 AEO Signals'}`;
 }
 
 // ── Insight banner ────────────────────────────────────────
@@ -118,14 +118,15 @@ function renderInsightBanner(report) {
 
   if (meta.from && meta.to) {
     const days = Math.round((new Date(meta.to) - new Date(meta.from)) / 86400000) + 1;
-    insights.push(`Report covers ${meta.dateRangeLabel || meta.from} · ${days} days`);
+    const cmpLabel = getComparisonLabel(meta.comparisonMode);
+    insights.push(`Report covers ${meta.dateRangeLabel || meta.from} \u00b7 ${days} days \u00b7 ${cmpLabel}`);
   }
   const totalUsers = kpis.totalUsers?.value;
   if (totalUsers) insights.push(`Total users this period: ${totalUsers.toLocaleString()}`);
   const aiTraffic = kpis.aiTraffic?.value;
   if (aiTraffic) insights.push(`AI referral sessions: ${aiTraffic.toLocaleString()}`);
 
-  text.textContent = insights.join('  ·  ');
+  text.textContent = insights.join('  \u00b7  ');
   banner.style.display = 'flex';
 }
 
@@ -153,22 +154,30 @@ function renderFooter(report) {
 
 // ── KPIs ─────────────────────────────────────────────────
 function renderKpis(report) {
-  const kpis = report.kpis || {};
+  const kpis           = report.kpis || {};
+  const comparisonMode = report.meta?.comparisonMode || 'previous_equal_length_period';
   document.querySelectorAll('.kpi-value[data-kpi]').forEach(valEl => {
     const key  = valEl.dataset.kpi;
     const data = kpis[key];
     if (!data) return;
     animateNumber(valEl, data.value, data.suffix || '');
     const changeEl = valEl.parentElement?.querySelector(`[data-kpi-change="${key}"]`);
-    if (changeEl) setKpiChange(changeEl, data);
+    if (changeEl) setKpiChange(changeEl, data, comparisonMode);
   });
 }
 
-function setKpiChange(el, data) {
+// ── KPI change badge ──────────────────────────────────────
+// comparisonMode drives the label:
+//   'previous_calendar_month'      → 'vs prev month'
+//   'previous_equal_length_period' → 'vs prev period'
+function setKpiChange(el, data, comparisonMode) {
   const raw    = data.change;
   const better = data.betterWhenDown ? raw <= 0 : raw >= 0;
   const sign   = raw > 0 ? '+' : '';
-  el.textContent = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} vs prev`;
+  const vsLabel = comparisonMode === 'previous_calendar_month'
+    ? 'vs prev month'
+    : 'vs prev period';
+  el.textContent = `${sign}${formatValue(raw)}${data.changeSuffix || '%'} ${vsLabel}`;
   el.className   = 'kpi-change ' + (better ? 'up' : 'down');
 }
 
@@ -246,7 +255,7 @@ function renderAiLandingPageBars(containerId, items) {
   const max = Math.max(...items.map(i => i.sessions || 0), 1);
   el.innerHTML = items.map((item, idx) => {
     const color = BAR_COLORS[idx % BAR_COLORS.length];
-    const label = (item.landingPage || '').replace(/^\//,'').replace(/\/$/,'') || '/';
+    const label = (item.landingPage || '').replace(/^\//, '').replace(/\/$/, '') || '/';
     return `
       <div class="mrow">
         <span class="mname" title="${escHtml(item.landingPage)}">${escHtml(label || item.landingPage)}</span>
@@ -272,7 +281,7 @@ function renderLandingPageBars(containerId, items) {
   const max = Math.max(...items.map(i => i.value), 1);
   el.innerHTML = items.map((item, idx) => {
     const color = BAR_COLORS[idx % BAR_COLORS.length];
-    const label = item.name.replace(/^\//,'').replace(/\/$/,'') || '/';
+    const label = item.name.replace(/^\//, '').replace(/\/$/, '') || '/';
     return `
       <div class="mrow">
         <span class="mname" title="${escHtml(item.name)}">${escHtml(label || item.name)}</span>
@@ -328,20 +337,20 @@ function syncExportControls(report) {
 
 // ── Formatters ────────────────────────────────────────────
 function formatValue(v) {
-  if (v === null || v === undefined) return '—';
+  if (v === null || v === undefined) return '\u2014';
   const n = parseFloat(v);
-  if (isNaN(n)) return '—';
+  if (isNaN(n)) return '\u2014';
   return Number.isInteger(n) ? n.toLocaleString() : n.toFixed(1);
 }
 
 function formatInt(v) {
   const n = parseInt(v, 10);
-  return isNaN(n) ? '—' : n.toLocaleString();
+  return isNaN(n) ? '\u2014' : n.toLocaleString();
 }
 
 function fmtShort(v) {
-  if (v >= 1_000_000) return (v/1_000_000).toFixed(1).replace(/\.0$/,'') + 'M';
-  if (v >= 1000)      return (v/1000).toFixed(1).replace(/\.0$/,'') + 'k';
+  if (v >= 1_000_000) return (v/1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (v >= 1000)      return (v/1000).toFixed(1).replace(/\.0$/, '') + 'k';
   return v.toLocaleString();
 }
 
