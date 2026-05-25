@@ -1,5 +1,5 @@
 const REPORT_CONFIG = {
-  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-overview-phase1',
+  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report-orchestrator',
   useDemoFallback: true
 };
 
