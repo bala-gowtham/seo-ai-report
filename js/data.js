@@ -1,8 +1,5 @@
 const REPORT_CONFIG = {
-  // Replace with your real n8n webhook URL before going live.
-  n8nWebhookUrl: 'https://YOUR-N8N-DOMAIN/webhook/seo-overview-report',
-
-  // Keep true during development (uses DEMO_REPORT_DATA on fetch failure).
+  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-overview-phase1',
   useDemoFallback: true
 };
 
@@ -11,25 +8,32 @@ const REPORT_CONFIG = {
   N8N RESPONSE CONTRACT
   ============================================================
 
-  CTR (gscKeywords[].ctr):
-    Must be a PERCENTAGE — e.g. 5.2 means 5.2%.
-    GSC API returns a decimal ratio (0.052). In n8n: ctr: row.ctr * 100
+  kpis[key]:
+    { value, change, suffix, changeSuffix }
+    change = % change vs previous period (positive = up, negative = down)
+    avgCtr.changeSuffix = ' pp' (percentage points)
+    keywordsTop10.changeSuffix = '' (raw count)
 
-  deviceSplit[].value:
-    Raw session count (used for doughnut proportions + legend %).
+  sessionsOverTime:
+    { labels: ['May 1',...], current: [...], previous: [...] }
+    previous = same-length array for prev period, empty [] until Phase 2
 
-  aeoSources[].value:
-    Raw session count (used for doughnut proportions).
+  gscTrend:
+    { labels: ['2026-05-01',...], impressions: [...], clicks: [...] }
 
-  topLandingPages[].value:
-    Raw organic session count for bar proportion.
+  deviceSplit[]:      { name, value }  — raw session counts
+  trafficByChannel[]: { name, value }  — raw session counts
+  topLandingPages[]:  { name, value }  — raw session counts
 
-  aeoLandingPages[].sessions:
-    Raw AI referral session count per landing page.
+  gscKeywords[]:
+    { query, clicks, impressions, ctr (PERCENTAGE e.g. 5.2), position }
 
-  opportunityQueries:
-    High impressions, low CTR, reachable position.
-    ctr is a PERCENTAGE (e.g. 0.8 means 0.8%).
+  opportunityQueries[]:
+    { query, impressions, ctr (PERCENTAGE), position }
+
+  aeoSources[]:       { name, value } — raw AI referral sessions
+  aeoLandingPages[]:  { sourceMedium, landingPage, sessions, ... }
+  countries[]:        { name, value }
 
   CORS headers required from n8n:
     Access-Control-Allow-Origin: *
@@ -39,14 +43,14 @@ const REPORT_CONFIG = {
 */
 
 const DEFAULT_KPIS = {
-  totalUsers:      { value: 19840, change: 10.2,  suffix: '',  changeSuffix: '%' },
-  totalPageViews:  { value: 68420, change: 13.5,  suffix: '',  changeSuffix: '%' },
-  conversions:     { value: 186,   change: 14.9,  suffix: '',  changeSuffix: '%' },
-  aiTraffic:       { value: 88,    change: 22.2,  suffix: '',  changeSuffix: '%' },
-  gscClicks:       { value: 9340,  change: 8.1,   suffix: '',  changeSuffix: '%' },
-  gscImpressions:  { value: 163400,change: 11.6,  suffix: '',  changeSuffix: '%' },
-  avgCtr:          { value: 5.7,   change: 0.4,   suffix: '%', changeSuffix: ' pp' },
-  keywordsTop10:   { value: 47,    change: 5,     suffix: '',  changeSuffix: '' }
+  totalUsers:      { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  totalPageViews:  { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  conversions:     { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  aiTraffic:       { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  gscClicks:       { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  gscImpressions:  { value: 0, change: 0,  suffix: '',  changeSuffix: '%' },
+  avgCtr:          { value: 0, change: 0,  suffix: '%', changeSuffix: ' pp' },
+  keywordsTop10:   { value: 0, change: 0,  suffix: '',  changeSuffix: '' }
 };
 
 const DEMO_REPORT_DATA = {
@@ -59,7 +63,16 @@ const DEMO_REPORT_DATA = {
     monthLabel:  'May 2026',
     sourceLabel: 'GA4 · GSC · AEO Signals'
   },
-  kpis: { ...DEFAULT_KPIS },
+  kpis: {
+    totalUsers:      { value: 19840, change: 10.2,  suffix: '',  changeSuffix: '%' },
+    totalPageViews:  { value: 68420, change: 13.5,  suffix: '',  changeSuffix: '%' },
+    conversions:     { value: 186,   change: 14.9,  suffix: '',  changeSuffix: '%' },
+    aiTraffic:       { value: 88,    change: 22.2,  suffix: '',  changeSuffix: '%' },
+    gscClicks:       { value: 9340,  change: 8.1,   suffix: '',  changeSuffix: '%' },
+    gscImpressions:  { value: 163400,change: 11.6,  suffix: '',  changeSuffix: '%' },
+    avgCtr:          { value: 5.7,   change: 0.4,   suffix: '%', changeSuffix: ' pp' },
+    keywordsTop10:   { value: 47,    change: 5,     suffix: '',  changeSuffix: '' }
+  },
   sessionsOverTime: {
     labels:   ['May 1','May 5','May 10','May 15','May 20','May 25','May 31'],
     current:  [2840, 3120, 2980, 3450, 3280, 3780, 3540],
@@ -86,9 +99,9 @@ const DEMO_REPORT_DATA = {
     { name: '/contact/',               value: 1340 }
   ],
   gscTrend: {
-    labels:      ['May 1','May 5','May 10','May 15','May 20','May 25','May 31'],
-    impressions: [18400, 21200, 19800, 23400, 22100, 25600, 24200],
-    clicks:      [1040,  1280,  1120,  1440,  1320,  1580,  1460]
+    labels:      ['May 1','May 5','May 10','May 15','May 20','May 31'],
+    impressions: [18400, 21200, 19800, 23400, 22100, 24200],
+    clicks:      [1040,  1280,  1120,  1440,  1320,  1460]
   },
   gscKeywords: [
     { query: 'seo agency india',             clicks: 420, impressions: 8200, ctr: 5.12, position: 3.4 },
@@ -98,11 +111,11 @@ const DEMO_REPORT_DATA = {
     { query: 'rank tracking software',       clicks: 98,  impressions: 3800, ctr: 2.58, position: 7.8 }
   ],
   opportunityQueries: [
-    { query: 'best seo tools 2026',          impressions: 14200, ctr: 0.62, position: 11.4 },
-    { query: 'ai overview seo strategy',     impressions: 9800,  ctr: 0.48, position: 13.7 },
-    { query: 'how to rank on chatgpt',       impressions: 7600,  ctr: 0.31, position: 16.2 },
-    { query: 'seo automation n8n',           impressions: 5100,  ctr: 0.94, position: 9.8 },
-    { query: 'gsc api google sheets',        impressions: 4300,  ctr: 0.70, position: 14.1 }
+    { query: 'best seo tools 2026',       impressions: 14200, ctr: 0.62, position: 11.4 },
+    { query: 'ai overview seo strategy',  impressions: 9800,  ctr: 0.48, position: 13.7 },
+    { query: 'how to rank on chatgpt',    impressions: 7600,  ctr: 0.31, position: 16.2 },
+    { query: 'seo automation n8n',        impressions: 5100,  ctr: 0.94, position: 9.8 },
+    { query: 'gsc api google sheets',     impressions: 4300,  ctr: 0.70, position: 14.1 }
   ],
   aeoSources: [
     { name: 'chatgpt.com',           value: 38 },
@@ -133,9 +146,9 @@ async function fetchReportData(params) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectId: params.projectId,
-        from:      params.from,
-        to:        params.to
+        'client-id': params.projectId,
+        from:        params.from,
+        to:          params.to
       })
     });
 
@@ -144,7 +157,7 @@ async function fetchReportData(params) {
     const liveData = await response.json();
     return normalizeReportData(liveData, params);
   } catch (error) {
-    console.warn('Report fetch failed:', error);
+    console.warn('Report fetch failed, using demo data:', error);
     if (REPORT_CONFIG.useDemoFallback) {
       return getDemoData(params);
     }
@@ -163,32 +176,38 @@ function normalizeReportData(report, params = {}) {
   const data = {
     ...fallback,
     ...incoming,
-    meta:              { ...fallback.meta,             ...(incoming.meta || {}) },
-    sessionsOverTime:  { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
-    gscTrend:          { ...fallback.gscTrend,         ...(incoming.gscTrend || {}) },
-    deviceSplit:       Array.isArray(incoming.deviceSplit)       ? incoming.deviceSplit       : fallback.deviceSplit,
-    trafficByChannel:  Array.isArray(incoming.trafficByChannel)  ? incoming.trafficByChannel  : fallback.trafficByChannel,
-    topLandingPages:   Array.isArray(incoming.topLandingPages)   ? incoming.topLandingPages   : fallback.topLandingPages,
-    gscKeywords:       Array.isArray(incoming.gscKeywords)       ? incoming.gscKeywords       : fallback.gscKeywords,
-    opportunityQueries:Array.isArray(incoming.opportunityQueries)? incoming.opportunityQueries: fallback.opportunityQueries,
-    aeoSources:        Array.isArray(incoming.aeoSources)        ? incoming.aeoSources        : fallback.aeoSources,
-    aeoLandingPages:   Array.isArray(incoming.aeoLandingPages)   ? incoming.aeoLandingPages   : fallback.aeoLandingPages,
-    countries:         Array.isArray(incoming.countries)         ? incoming.countries         : fallback.countries,
-    warnings:          Array.isArray(incoming.warnings)          ? incoming.warnings          : []
+    meta:               { ...fallback.meta,             ...(incoming.meta             || {}) },
+    sessionsOverTime:   { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
+    gscTrend:           { ...fallback.gscTrend,         ...(incoming.gscTrend         || {}) },
+    deviceSplit:        Array.isArray(incoming.deviceSplit)        ? incoming.deviceSplit        : fallback.deviceSplit,
+    trafficByChannel:   Array.isArray(incoming.trafficByChannel)   ? incoming.trafficByChannel   : fallback.trafficByChannel,
+    topLandingPages:    Array.isArray(incoming.topLandingPages)    ? incoming.topLandingPages    : fallback.topLandingPages,
+    gscKeywords:        Array.isArray(incoming.gscKeywords)        ? incoming.gscKeywords        : fallback.gscKeywords,
+    opportunityQueries: Array.isArray(incoming.opportunityQueries) ? incoming.opportunityQueries : fallback.opportunityQueries,
+    aeoSources:         Array.isArray(incoming.aeoSources)         ? incoming.aeoSources         : fallback.aeoSources,
+    aeoLandingPages:    Array.isArray(incoming.aeoLandingPages)    ? incoming.aeoLandingPages    : fallback.aeoLandingPages,
+    countries:          Array.isArray(incoming.countries)          ? incoming.countries          : fallback.countries,
+    warnings:           Array.isArray(incoming.warnings)           ? incoming.warnings           : []
   };
 
-  // Always use the single project
-  data.meta.projectId   = 'local-seo-client';
-  data.meta.projectName = 'Local SEO Client';
+  // Preserve live projectName — only fall back to 'Local SEO Client' if not provided
+  data.meta.projectId   = incoming.meta?.projectId   || 'local-seo-client';
+  data.meta.projectName = incoming.meta?.projectName || 'Local SEO Client';
 
-  if (params.from)  data.meta.from  = params.from;
-  if (params.to)    data.meta.to    = params.to;
+  if (params.from) data.meta.from = params.from;
+  if (params.to)   data.meta.to   = params.to;
 
   data.meta.dateRangeLabel = formatDateRangeLabel(data.meta.from, data.meta.to);
   data.meta.monthLabel     = data.meta.dateRangeLabel;
   data.meta.sourceLabel    = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
 
+  // Merge KPIs: live values override defaults, preserve suffix/changeSuffix from defaults
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
+
+  // Ensure sessionsOverTime.previous is always an array (empty ok, not undefined)
+  if (!Array.isArray(data.sessionsOverTime.previous)) {
+    data.sessionsOverTime.previous = [];
+  }
 
   return data;
 }
@@ -206,13 +225,12 @@ function mergeKpis(defaultKpis, incomingKpis) {
 
 function formatDateRangeLabel(from, to) {
   if (!from && !to) return 'May 2026';
-  const fmt = (dateStr) => {
+  const fmt = dateStr => {
     if (!dateStr) return '';
     const [y, m, d] = dateStr.split('-').map(Number);
-    const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(y, m - 1, d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   };
-  if (from && to && from !== to) return `${fmt(from)} – ${fmt(to)}`;
+  if (from && to && from !== to) return `${fmt(from)} \u2013 ${fmt(to)}`;
   if (from) return fmt(from);
   return fmt(to);
 }
