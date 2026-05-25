@@ -57,13 +57,13 @@
     <div class="topbar report-topbar">
       <div class="report-heading">
         <div class="page-title">SEO Overview</div>
-        <div class="page-subtitle" id="reportSubtitle">Local SEO Client · GA4 · GSC · AEO Signals</div>
+        <div class="page-subtitle" id="reportSubtitle">Loading&#8230; · GA4 · GSC · AEO Signals</div>
       </div>
       <div class="report-filter-bar">
         <div class="filter-field project-field">
           <label for="projectSelector">Project</label>
-          <select id="projectSelector" class="filter-select">
-            <option value="local-seo-client" selected>Local SEO Client</option>
+          <select id="projectSelector" class="filter-select" disabled>
+            <option value="" disabled selected>Loading clients&#8230;</option>
           </select>
           <div class="export-field-value" id="exportProjectValue"></div>
         </div>
@@ -115,7 +115,6 @@
         <span class="section-desc">Current period vs previous period</span>
       </div>
       <section class="kpi-grid" aria-label="KPI summary">
-        <!-- Row 1: GA4 KPIs -->
         <div class="kpi-card" style="--card-color:#ff6b35">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Total Users</div><div class="kpi-dot"></div></div>
@@ -140,7 +139,6 @@
           <div class="kpi-value" data-kpi="aiTraffic">—</div>
           <div class="kpi-change" data-kpi-change="aiTraffic">—</div>
         </div>
-        <!-- Row 2: GSC KPIs -->
         <div class="kpi-card" style="--card-color:#22c55e">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Google Search Clicks</div><div class="kpi-dot"></div></div>
@@ -190,8 +188,6 @@
 
       <!-- ── Row 2: Device Split · Traffic by Channel · Top Landing Pages (3-col) ── -->
       <section class="charts-row charts-row-third">
-
-        <!-- Device Split -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -202,8 +198,6 @@
           </div>
           <canvas id="devChart" style="max-height:200px"></canvas>
         </div>
-
-        <!-- Traffic by Channel -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -214,8 +208,6 @@
           </div>
           <canvas id="chanChart" style="max-height:210px"></canvas>
         </div>
-
-        <!-- Top Landing Pages -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -226,7 +218,6 @@
           </div>
           <div id="landingPageBars" class="metric-list compact-list"></div>
         </div>
-
       </section>
 
       <!-- ── Row 3: GSC Clicks vs Impressions (full width) ── -->
@@ -282,7 +273,7 @@
         </div>
       </section>
 
-      <!-- ── Row 5: AEO Sources · AI Sources · Top Landing Page AI Sessions (3-col) ── -->
+      <!-- ── Row 5: AEO Sources · AI Sources · Top Landing Page AI Sessions ── -->
       <div class="section-header">
         <div class="section-header-left">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 8v4l3 3"/><circle cx="19" cy="5" r="3" fill="currentColor"/></svg>
@@ -291,8 +282,6 @@
         <span class="section-desc">Referral traffic from AI tools · GSC opportunity queries</span>
       </div>
       <section class="charts-row charts-row-third">
-
-        <!-- AEO Traffic Sources -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -306,8 +295,6 @@
           </div>
           <canvas id="aeoChart" style="max-height:200px"></canvas>
         </div>
-
-        <!-- AI Sources Table (replaces Top Countries) -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -329,8 +316,6 @@
             </table>
           </div>
         </div>
-
-        <!-- Top Landing Page AI Sessions (replaces Opportunity Queries) -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -341,7 +326,6 @@
           </div>
           <div id="aiLandingPageBars" class="metric-list compact-list"></div>
         </div>
-
       </section>
 
     </div><!-- end #dashboardContent -->

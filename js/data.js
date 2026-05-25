@@ -1,5 +1,6 @@
 const REPORT_CONFIG = {
-  n8nWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report-orchestrator',
+  n8nWebhookUrl:    'https://balsgowtham-n8n.hf.space/webhook/seo-report-orchestrator',
+  clientsWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report-clients',
   useDemoFallback: true
 };
 
@@ -40,6 +41,9 @@ const REPORT_CONFIG = {
                                 comparison is previous calendar month (e.g. Apr vs May)
     'previous_equal_length_period' — custom date range;
                                 comparison is the immediately preceding equal-length period
+
+  CLIENTS WEBHOOK CONTRACT (GET /webhook/seo-report-clients):
+    Response: { ok: true, count: N, clients: [ { clientId, clientName, siteUrl } ] }
 
   CORS headers required from n8n:
     Access-Control-Allow-Origin: *
@@ -149,6 +153,17 @@ const DEMO_REPORT_DATA = {
   warnings: []
 };
 
+async function fetchClientList() {
+  const res = await fetch(REPORT_CONFIG.clientsWebhookUrl, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) throw new Error(`Clients webhook returned ${res.status}`);
+  const data = await res.json();
+  if (!data.ok || !Array.isArray(data.clients)) throw new Error('Invalid clients response');
+  return data.clients;
+}
+
 async function fetchReportData(params) {
   try {
     const response = await fetch(REPORT_CONFIG.n8nWebhookUrl, {
@@ -199,17 +214,14 @@ function normalizeReportData(report, params = {}) {
     warnings:           Array.isArray(incoming.warnings)           ? incoming.warnings           : []
   };
 
-  // Preserve live projectName — only fall back to 'Local SEO Client' if not provided
   data.meta.projectId   = incoming.meta?.projectId   || 'local-seo-client';
   data.meta.projectName = incoming.meta?.projectName || 'Local SEO Client';
 
   if (params.from) data.meta.from = params.from;
   if (params.to)   data.meta.to   = params.to;
 
-  // Preserve comparisonMode from live response; fall back to 'previous_equal_length_period'
   data.meta.comparisonMode = incoming.meta?.comparisonMode || 'previous_equal_length_period';
 
-  // Preserve prevFrom / prevTo from live response if available
   if (incoming.meta?.prevFrom) data.meta.prevFrom = incoming.meta.prevFrom;
   if (incoming.meta?.prevTo)   data.meta.prevTo   = incoming.meta.prevTo;
 
@@ -217,10 +229,8 @@ function normalizeReportData(report, params = {}) {
   data.meta.monthLabel     = data.meta.dateRangeLabel;
   data.meta.sourceLabel    = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
 
-  // Merge KPIs: live values override defaults, preserve suffix/changeSuffix from defaults
   data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
 
-  // Ensure sessionsOverTime.previous is always an array (empty ok, not undefined)
   if (!Array.isArray(data.sessionsOverTime.previous)) {
     data.sessionsOverTime.previous = [];
   }
@@ -251,13 +261,6 @@ function formatDateRangeLabel(from, to) {
   return fmt(to);
 }
 
-/**
- * Returns a human-readable comparison label based on comparisonMode.
- * Used by KPI cards and insight banner.
- *
- * 'previous_calendar_month' → 'vs previous month'
- * 'previous_equal_length_period' → 'vs previous period'
- */
 function getComparisonLabel(comparisonMode) {
   return comparisonMode === 'previous_calendar_month'
     ? 'vs previous month'

@@ -8,9 +8,39 @@ function loadDemoPreview() {
   renderDashboard(report);
 }
 
+// ── Client selector loader ────────────────────────────────
+async function loadClientOptions() {
+  const select = document.getElementById('projectSelector');
+  if (!select) return;
+
+  select.innerHTML = '<option value="" disabled selected>Loading clients\u2026</option>';
+  select.disabled = true;
+
+  try {
+    const clients = await fetchClientList();
+
+    if (!clients.length) {
+      select.innerHTML = '<option value="" disabled selected>No active clients found</option>';
+      select.disabled = false;
+      return;
+    }
+
+    select.innerHTML = clients.map((client, idx) =>
+      `<option value="${client.clientId}"${idx === 0 ? ' selected' : ''}>${client.clientName}</option>`
+    ).join('');
+    select.disabled = false;
+  } catch (err) {
+    console.warn('Client list load failed (using demo mode):', err);
+    // Fallback: show a single demo option so the UI is still usable
+    select.innerHTML = '<option value="local-seo-client" selected>Local SEO Client (demo)</option>';
+    select.disabled = false;
+  }
+}
+
 // ── Filters ───────────────────────────────────────────────
 function getCurrentFilters() {
-  const projectId = 'local-seo-client';
+  const select    = document.getElementById('projectSelector');
+  const projectId = select?.value || '';
   const from      = document.getElementById('fromDateSelector')?.value || getDefaultFrom();
   const to        = document.getElementById('toDateSelector')?.value   || getDefaultTo();
   return { projectId, from, to };
@@ -44,7 +74,6 @@ function initReportControls() {
     document.getElementById('exportBtn')?.click();
   });
 
-  // Guard: from date cannot be after to date
   const fromEl = document.getElementById('fromDateSelector');
   const toEl   = document.getElementById('toDateSelector');
   if (fromEl && toEl) {
@@ -63,13 +92,19 @@ async function reloadReport() {
   const error     = document.getElementById('errorState');
   const content   = document.getElementById('dashboardContent');
 
+  const filters = getCurrentFilters();
+
+  if (!filters.projectId) {
+    alert('Please select a client from the Project dropdown.');
+    return;
+  }
+
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Loading\u2026'; }
   if (loading)   loading.style.display = 'flex';
   if (error)     error.style.display   = 'none';
   if (content)   content.style.opacity = '0.4';
 
   try {
-    const filters = getCurrentFilters();
     const report  = await fetchReportData(filters);
     currentReport = report;
     renderDashboard(report);
@@ -166,10 +201,6 @@ function renderKpis(report) {
   });
 }
 
-// ── KPI change badge ──────────────────────────────────────
-// comparisonMode drives the label:
-//   'previous_calendar_month'      → 'vs prev month'
-//   'previous_equal_length_period' → 'vs prev period'
 function setKpiChange(el, data, comparisonMode) {
   const raw    = data.change;
   const better = data.betterWhenDown ? raw <= 0 : raw >= 0;
@@ -181,7 +212,6 @@ function setKpiChange(el, data, comparisonMode) {
   el.className   = 'kpi-change ' + (better ? 'up' : 'down');
 }
 
-// ── Number animation ─────────────────────────────────────
 function animateNumber(el, target, suffix) {
   const start    = 0;
   const duration = 600;
@@ -198,7 +228,6 @@ function animateNumber(el, target, suffix) {
   requestAnimationFrame(step);
 }
 
-// ── GSC keyword table ─────────────────────────────────────
 function renderGscKeywordTable(items) {
   const tbody = document.getElementById('gscKeywordTableBody');
   if (!tbody) return;
@@ -228,7 +257,6 @@ function renderGscKeywordTable(items) {
   }).join('');
 }
 
-// ── AI Sources table ──────────────────────────────────────
 function renderAiSourcesTable(items) {
   const tbody = document.getElementById('aiSourcesTableBody');
   if (!tbody) return;
@@ -244,7 +272,6 @@ function renderAiSourcesTable(items) {
     </tr>`).join('');
 }
 
-// ── AI Landing Page bars (like Top Landing Pages) ─────────
 function renderAiLandingPageBars(containerId, items) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -271,7 +298,6 @@ function renderAiLandingPageBars(containerId, items) {
   });
 }
 
-// ── Top Landing Pages bars (compact) ─────────────────────
 function renderLandingPageBars(containerId, items) {
   const el = document.getElementById(containerId);
   if (!el || !items.length) {
@@ -297,7 +323,6 @@ function renderLandingPageBars(containerId, items) {
   });
 }
 
-// ── Metric bars (generic) ─────────────────────────────────
 const BAR_COLORS = [
   'var(--accent-orange)','var(--accent-sky)',
   'var(--accent-violet)','var(--accent-amber)','var(--accent-teal)'
@@ -324,7 +349,6 @@ function renderMetricBars(containerId, items, suffix) {
   });
 }
 
-// ── Export helpers ────────────────────────────────────────
 function syncExportControls(report) {
   const meta    = report?.meta || {};
   const projEl  = document.getElementById('exportProjectValue');
@@ -335,7 +359,6 @@ function syncExportControls(report) {
   if (toEl)    toEl.textContent    = meta.to   || '';
 }
 
-// ── Formatters ────────────────────────────────────────────
 function formatValue(v) {
   if (v === null || v === undefined) return '\u2014';
   const n = parseFloat(v);
