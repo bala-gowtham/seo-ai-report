@@ -13,6 +13,7 @@
   <script defer src="js/charts.js"></script>
   <script defer src="js/ui.js"></script>
   <script defer src="js/export.js"></script>
+  <script defer src="js/ga4.js"></script>
   <script defer src="js/main.js"></script>
 </head>
 <body>
@@ -30,10 +31,14 @@
     </div>
 
     <div class="nav-section">Analytics</div>
-    <div class="nav-item active">
+    <div class="nav-item active" id="navOverview">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Overview
       <span class="nav-badge">Live</span>
+    </div>
+    <div class="nav-item" id="navGa4" role="button" tabindex="0" aria-label="GA4 Analytics tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="13" y="6" width="3" height="12"/></svg>
+      GA4 Analytics
     </div>
 
     <div class="nav-section">Reports</div>
@@ -329,6 +334,149 @@
       </section>
 
     </div><!-- end #dashboardContent -->
+
+    <!-- ═══ GA4 Lite Tab ════════════════════════════════════ -->
+    <div id="ga4TabContent" style="display:none">
+
+      <!-- KPI Strip -->
+      <div class="section-header">
+        <div class="section-header-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span class="section-label">GA4 Performance KPIs</span>
+        </div>
+        <span class="section-desc">Sessions · Engagement · Conversions vs previous period · GA4</span>
+      </div>
+      <section class="kpi-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:20px" aria-label="GA4 KPI strip" id="ga4KpiStrip"></section>
+
+      <!-- Row A: Traffic by Channel (full width table) -->
+      <div class="section-header">
+        <div class="section-header-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          <span class="section-label">Traffic Quality by Channel</span>
+        </div>
+        <span class="section-desc">Sessions, engagement rate and conversions by acquisition channel · GA4</span>
+      </div>
+      <section class="charts-row" style="margin-bottom:18px">
+        <div class="chart-card chart-card-full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Acquisition Channels</div>
+              <div class="chart-subtitle">Sessions · previous period · % change · engagement rate · conversions · GA4</div>
+            </div>
+            <span class="tag tag-sky">GA4</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Channel</th>
+                  <th style="text-align:right">Sessions</th>
+                  <th style="text-align:right">Prev Period</th>
+                  <th style="text-align:right">Change</th>
+                  <th style="text-align:right">Eng. Rate</th>
+                  <th style="text-align:right">Conversions</th>
+                </tr>
+              </thead>
+              <tbody id="ga4ChannelTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row B: Source / Medium (full width) -->
+      <div class="section-header">
+        <div class="section-header-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="section-label">Source / Medium</span>
+        </div>
+        <span class="section-desc">Granular traffic source breakdown · GA4</span>
+      </div>
+      <section class="charts-row" style="margin-bottom:18px">
+        <div class="chart-card chart-card-full">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Source / Medium Breakdown</div>
+              <div class="chart-subtitle">Sessions · previous · change · engagement rate · GA4</div>
+            </div>
+            <span class="tag tag-sky">GA4</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Source / Medium</th>
+                  <th style="text-align:right">Sessions</th>
+                  <th style="text-align:right">Prev Period</th>
+                  <th style="text-align:right">Change</th>
+                  <th style="text-align:right">Eng. Rate</th>
+                </tr>
+              </thead>
+              <tbody id="ga4SourceMediumTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row C: Landing Pages + Device Split side-by-side -->
+      <div class="section-header">
+        <div class="section-header-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span class="section-label">Landing Pages &amp; Devices</span>
+        </div>
+        <span class="section-desc">Top organic entry pages · device session split · GA4</span>
+      </div>
+      <section class="charts-row charts-row-equal" style="margin-bottom:18px">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Top Landing Pages</div>
+              <div class="chart-subtitle">Sessions · change · engagement rate · conversions · GA4</div>
+            </div>
+            <span class="tag tag-sky">GA4</span>
+          </div>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Page</th>
+                  <th style="text-align:right">Sessions</th>
+                  <th style="text-align:right">Prev</th>
+                  <th style="text-align:right">Change</th>
+                  <th style="text-align:right">Eng.</th>
+                  <th style="text-align:right">Conv.</th>
+                </tr>
+              </thead>
+              <tbody id="ga4LandingTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Device Split</div>
+              <div class="chart-subtitle">Sessions by device category vs previous period · GA4</div>
+            </div>
+            <span class="tag tag-sky">GA4</span>
+          </div>
+          <canvas id="ga4DeviceChart" style="max-height:200px"></canvas>
+          <div id="ga4DeviceList" style="margin-top:16px"></div>
+        </div>
+      </section>
+
+      <!-- Row D: Smart Insights / Warnings -->
+      <div id="ga4Warnings"></div>
+
+      <!-- Footer -->
+      <footer class="report-footer" style="margin-top:32px">
+        <span id="ga4FooterDate"></span>
+        <span class="footer-sep">·</span>
+        <span>GA4 Analytics · Powered by SEO Intel</span>
+      </footer>
+
+    </div><!-- end #ga4TabContent -->
 
     <!-- Footer -->
     <footer class="report-footer" id="reportFooter">

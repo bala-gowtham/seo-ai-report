@@ -11,4 +11,5 @@ document.addEventListener('DOMContentLoaded', async function () {
   // Do NOT call reloadReport() here because that calls n8n.
   // User must click Generate Report to fetch live data.
   loadDemoPreview();
+  initGa4Tab();
 });
