@@ -101,30 +101,30 @@ function renderGa4Tab(report) {
 function buildGa4LiteData(report) {
   const live = report || {};
   const liveKpis = live.kpis || {};
+
+  const hasLiveGa4 =
+    Object.prototype.hasOwnProperty.call(liveKpis, 'sessions') ||
+    Array.isArray(live.trafficByChannel) ||
+    Array.isArray(live.sourceMedium) ||
+    Array.isArray(live.topLandingPages) ||
+    Array.isArray(live.deviceSplit);
+
+  if (!hasLiveGa4) {
+    return GA4_LITE_DEMO;
+  }
+
   return {
-    kpis: (liveKpis.sessions && liveKpis.sessions.value > 0)
-      ? {
-          sessions:        liveKpis.sessions        || GA4_LITE_DEMO.kpis.sessions,
-          engagedSessions: liveKpis.engagedSessions || GA4_LITE_DEMO.kpis.engagedSessions,
-          engagementRate:  liveKpis.engagementRate  || GA4_LITE_DEMO.kpis.engagementRate,
-          conversions:     liveKpis.conversions      || GA4_LITE_DEMO.kpis.conversions
-        }
-      : GA4_LITE_DEMO.kpis,
-    trafficByChannel: Array.isArray(live.trafficByChannel) && live.trafficByChannel.length > 0
-      ? enrichChannels(live.trafficByChannel)
-      : GA4_LITE_DEMO.trafficByChannel,
-    sourceMedium: Array.isArray(live.sourceMedium) && live.sourceMedium.length > 0
-      ? live.sourceMedium
-      : GA4_LITE_DEMO.sourceMedium,
-    topLandingPages: Array.isArray(live.topLandingPages) && live.topLandingPages.length > 0
-      ? enrichLanding(live.topLandingPages)
-      : GA4_LITE_DEMO.topLandingPages,
-    deviceSplit: Array.isArray(live.deviceSplit) && live.deviceSplit.length > 0
-      ? live.deviceSplit
-      : GA4_LITE_DEMO.deviceSplit,
-    warnings: Array.isArray(live.ga4Warnings) && live.ga4Warnings.length > 0
-      ? live.ga4Warnings
-      : GA4_LITE_DEMO.warnings
+    kpis: {
+      sessions: liveKpis.sessions || { value: 0, prev: 0, change: 0, suffix: '', changeSuffix: '%' },
+      engagedSessions: liveKpis.engagedSessions || { value: 0, prev: 0, change: 0, suffix: '', changeSuffix: '%' },
+      engagementRate: liveKpis.engagementRate || { value: 0, prev: 0, change: 0, suffix: '%', changeSuffix: ' pp' },
+      conversions: liveKpis.conversions || { value: 0, prev: 0, change: 0, suffix: '', changeSuffix: '%' }
+    },
+    trafficByChannel: Array.isArray(live.trafficByChannel) ? enrichChannels(live.trafficByChannel) : [],
+    sourceMedium: Array.isArray(live.sourceMedium) ? live.sourceMedium : [],
+    topLandingPages: Array.isArray(live.topLandingPages) ? enrichLanding(live.topLandingPages) : [],
+    deviceSplit: Array.isArray(live.deviceSplit) ? live.deviceSplit : [],
+    warnings: Array.isArray(live.ga4Warnings) ? live.ga4Warnings : []
   };
 }
 
