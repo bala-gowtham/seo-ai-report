@@ -4,8 +4,17 @@ let currentReport = null;
 function loadDemoPreview() {
   const filters = getCurrentFilters();
   const report  = getDemoData(filters);
-  currentReport = report;
-  renderDashboard(report);
+currentReport = report;
+renderDashboard(report);
+
+const ga4Panel = document.getElementById('ga4TabContent');
+if (
+  ga4Panel &&
+  ga4Panel.style.display === 'block' &&
+  typeof renderGa4Tab === 'function'
+) {
+  renderGa4Tab(report);
+}
 }
 
 // ── Client selector loader ────────────────────────────────
