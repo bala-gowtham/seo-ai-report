@@ -72,7 +72,7 @@ function createSessionsChart() {
           label: 'This Period',
           data: [], borderColor: chartColors.orange,
           backgroundColor: g1, borderWidth: 2.5,
-          fill: true, tension: 0.3,
+          fill: true, tension: 0.3, spanGaps: false,
           pointBackgroundColor: chartColors.orange,
           pointRadius: 3, pointHoverRadius: 6
         },
@@ -80,7 +80,7 @@ function createSessionsChart() {
           label: 'Prev Period',
           data: [], borderColor: chartColors.sky,
           backgroundColor: g2, borderWidth: 1.5,
-          fill: true, tension: 0.3,
+          fill: true, tension: 0.3, spanGaps: false,
           borderDash: [4,3],
           pointRadius: 2, pointHoverRadius: 4,
           pointBackgroundColor: chartColors.sky
@@ -255,35 +255,41 @@ function createAeoChart() {
 
 // ── Render all charts with live data ─────────────────────
 function renderCharts(report) {
+  const sessionsOverTime = report.sessionsOverTime || {};
+  const deviceSplit = Array.isArray(report.deviceSplit) ? report.deviceSplit : [];
+  const trafficByChannel = Array.isArray(report.trafficByChannel) ? report.trafficByChannel : [];
+  const gscTrend = report.gscTrend || {};
+  const aeoSources = Array.isArray(report.aeoSources) ? report.aeoSources : [];
+
   if (chartInstances.sessions) {
-    chartInstances.sessions.data.labels              = report.sessionsOverTime.labels;
-    chartInstances.sessions.data.datasets[0].data   = report.sessionsOverTime.current;
-    chartInstances.sessions.data.datasets[1].data   = report.sessionsOverTime.previous;
+    chartInstances.sessions.data.labels = Array.isArray(sessionsOverTime.labels) ? sessionsOverTime.labels : [];
+    chartInstances.sessions.data.datasets[0].data = Array.isArray(sessionsOverTime.current) ? sessionsOverTime.current : [];
+    chartInstances.sessions.data.datasets[1].data = Array.isArray(sessionsOverTime.previous) ? sessionsOverTime.previous : [];
     chartInstances.sessions.update();
   }
 
   if (chartInstances.device) {
-    chartInstances.device.data.labels              = report.deviceSplit.map(i => i.name);
-    chartInstances.device.data.datasets[0].data   = report.deviceSplit.map(i => i.value);
+    chartInstances.device.data.labels = deviceSplit.map(i => i.name);
+    chartInstances.device.data.datasets[0].data = deviceSplit.map(i => i.value);
     chartInstances.device.update();
   }
 
   if (chartInstances.channel) {
-    chartInstances.channel.data.labels             = report.trafficByChannel.map(i => i.name);
-    chartInstances.channel.data.datasets[0].data  = report.trafficByChannel.map(i => i.value);
+    chartInstances.channel.data.labels = trafficByChannel.map(i => i.name);
+    chartInstances.channel.data.datasets[0].data = trafficByChannel.map(i => i.value);
     chartInstances.channel.update();
   }
 
   if (chartInstances.gsc) {
-    chartInstances.gsc.data.labels                = report.gscTrend.labels;
-    chartInstances.gsc.data.datasets[0].data      = report.gscTrend.impressions;
-    chartInstances.gsc.data.datasets[1].data      = report.gscTrend.clicks;
+    chartInstances.gsc.data.labels = Array.isArray(gscTrend.labels) ? gscTrend.labels : [];
+    chartInstances.gsc.data.datasets[0].data = Array.isArray(gscTrend.impressions) ? gscTrend.impressions : [];
+    chartInstances.gsc.data.datasets[1].data = Array.isArray(gscTrend.clicks) ? gscTrend.clicks : [];
     chartInstances.gsc.update();
   }
 
   if (chartInstances.aeo) {
-    chartInstances.aeo.data.labels                = report.aeoSources.map(i => i.name);
-    chartInstances.aeo.data.datasets[0].data      = report.aeoSources.map(i => i.value);
+    chartInstances.aeo.data.labels = aeoSources.map(i => i.name);
+    chartInstances.aeo.data.datasets[0].data = aeoSources.map(i => i.value);
     chartInstances.aeo.update();
   }
 }
