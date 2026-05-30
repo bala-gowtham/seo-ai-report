@@ -196,46 +196,101 @@ function getDemoData(params) {
 function normalizeReportData(report, params = {}) {
   const fallback = JSON.parse(JSON.stringify(DEMO_REPORT_DATA));
   const incoming = report || {};
+  const isDemo = incoming === DEMO_REPORT_DATA || incoming.meta?.projectId === 'local-seo-client';
+
+  const meta = {
+    ...fallback.meta,
+    ...(incoming.meta || {})
+  };
+
+  if (params.from) meta.from = params.from;
+  if (params.to) meta.to = params.to;
+
+  meta.projectId = incoming.meta?.projectId || params.projectId || 'local-seo-client';
+  meta.projectName = incoming.meta?.projectName || (params.projectId === 'demo' ? 'Demo Data' : 'Local SEO Client');
+  meta.comparisonMode = incoming.meta?.comparisonMode || 'previous_equal_length_period';
+
+  if (incoming.meta?.prevFrom) meta.prevFrom = incoming.meta.prevFrom;
+  if (incoming.meta?.prevTo) meta.prevTo = incoming.meta.prevTo;
+
+  meta.dateRangeLabel = formatDateRangeLabel(meta.from, meta.to);
+  meta.monthLabel = meta.dateRangeLabel;
+  meta.sourceLabel = meta.sourceLabel || 'GA4 · GSC · AEO Signals';
+
+  const sessionsOverTime = normalizeSessionsOverTime(
+    incoming.sessionsOverTime || (isDemo ? fallback.sessionsOverTime : null),
+    meta.comparisonMode
+  );
 
   const data = {
     ...fallback,
     ...incoming,
-    meta:               { ...fallback.meta,             ...(incoming.meta             || {}) },
-    sessionsOverTime:   { ...fallback.sessionsOverTime, ...(incoming.sessionsOverTime || {}) },
-    gscTrend:           { ...fallback.gscTrend,         ...(incoming.gscTrend         || {}) },
-    deviceSplit:        Array.isArray(incoming.deviceSplit)        ? incoming.deviceSplit        : fallback.deviceSplit,
-    trafficByChannel:   Array.isArray(incoming.trafficByChannel)   ? incoming.trafficByChannel   : fallback.trafficByChannel,
-    topLandingPages:    Array.isArray(incoming.topLandingPages)    ? incoming.topLandingPages    : fallback.topLandingPages,
-    gscKeywords:        Array.isArray(incoming.gscKeywords)        ? incoming.gscKeywords        : fallback.gscKeywords,
-    opportunityQueries: Array.isArray(incoming.opportunityQueries) ? incoming.opportunityQueries : fallback.opportunityQueries,
-    aeoSources:         Array.isArray(incoming.aeoSources)         ? incoming.aeoSources         : fallback.aeoSources,
-    aeoLandingPages:    Array.isArray(incoming.aeoLandingPages)    ? incoming.aeoLandingPages    : fallback.aeoLandingPages,
-    countries:          Array.isArray(incoming.countries)          ? incoming.countries          : fallback.countries,
-    warnings:           Array.isArray(incoming.warnings)           ? incoming.warnings           : []
+    meta,
+    kpis: mergeKpis(DEFAULT_KPIS, incoming.kpis || {}),
+    sessionsOverTime,
+    gscTrend: normalizeGscTrend(incoming.gscTrend || (isDemo ? fallback.gscTrend : null)),
+    deviceSplit: Array.isArray(incoming.deviceSplit) ? incoming.deviceSplit : (isDemo ? fallback.deviceSplit : []),
+    trafficByChannel: Array.isArray(incoming.trafficByChannel) ? incoming.trafficByChannel : (isDemo ? fallback.trafficByChannel : []),
+    topLandingPages: Array.isArray(incoming.topLandingPages) ? incoming.topLandingPages : (isDemo ? fallback.topLandingPages : []),
+    sourceMedium: Array.isArray(incoming.sourceMedium) ? incoming.sourceMedium : [],
+    ga4Warnings: Array.isArray(incoming.ga4Warnings) ? incoming.ga4Warnings : [],
+    gscKeywords: Array.isArray(incoming.gscKeywords) ? incoming.gscKeywords : (isDemo ? fallback.gscKeywords : []),
+    opportunityQueries: Array.isArray(incoming.opportunityQueries) ? incoming.opportunityQueries : (isDemo ? fallback.opportunityQueries : []),
+    aeoSources: Array.isArray(incoming.aeoSources) ? incoming.aeoSources : (isDemo ? fallback.aeoSources : []),
+    aeoLandingPages: Array.isArray(incoming.aeoLandingPages) ? incoming.aeoLandingPages : (isDemo ? fallback.aeoLandingPages : []),
+    countries: Array.isArray(incoming.countries) ? incoming.countries : (isDemo ? fallback.countries : []),
+    warnings: Array.isArray(incoming.warnings) ? incoming.warnings : []
   };
 
-  data.meta.projectId   = incoming.meta?.projectId   || 'local-seo-client';
-  data.meta.projectName = incoming.meta?.projectName || 'Local SEO Client';
+  return data;
+}
 
-  if (params.from) data.meta.from = params.from;
-  if (params.to)   data.meta.to   = params.to;
+function safeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
 
-  data.meta.comparisonMode = incoming.meta?.comparisonMode || 'previous_equal_length_period';
+function padArray(arr, length, fillValue = null) {
+  const out = arr.slice(0, length);
+  while (out.length < length) out.push(fillValue);
+  return out;
+}
 
-  if (incoming.meta?.prevFrom) data.meta.prevFrom = incoming.meta.prevFrom;
-  if (incoming.meta?.prevTo)   data.meta.prevTo   = incoming.meta.prevTo;
+function makeDayLabels(length) {
+  return Array.from({ length }, (_, i) => `Day ${i + 1}`);
+}
 
-  data.meta.dateRangeLabel = formatDateRangeLabel(data.meta.from, data.meta.to);
-  data.meta.monthLabel     = data.meta.dateRangeLabel;
-  data.meta.sourceLabel    = data.meta.sourceLabel || 'GA4 · GSC · AEO Signals';
+function normalizeSessionsOverTime(series, comparisonMode) {
+  const labels = safeArray(series?.labels);
+  const current = safeArray(series?.current);
+  const previous = safeArray(series?.previous);
 
-  data.kpis = mergeKpis(DEFAULT_KPIS, incoming.kpis || {});
+  if (comparisonMode === 'previous_calendar_month') {
+    const length = Math.max(labels.length, current.length, previous.length);
 
-  if (!Array.isArray(data.sessionsOverTime.previous)) {
-    data.sessionsOverTime.previous = [];
+    return {
+      labels: makeDayLabels(length),
+      current: padArray(current, length, null),
+      previous: padArray(previous, length, null)
+    };
   }
 
-  return data;
+  const length = Math.max(labels.length, current.length, previous.length);
+
+  return {
+    labels: labels.length === length ? labels : makeDayLabels(length),
+    current: padArray(current, length, null),
+    previous: padArray(previous, length, null)
+  };
+}
+
+function normalizeGscTrend(series) {
+  return {
+    labels: safeArray(series?.labels),
+    impressions: safeArray(series?.impressions),
+    clicks: safeArray(series?.clicks),
+    prevImpressions: safeArray(series?.prevImpressions),
+    prevClicks: safeArray(series?.prevClicks)
+  };
 }
 
 function mergeKpis(defaultKpis, incomingKpis) {
