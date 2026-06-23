@@ -1,5 +1,4 @@
 import {
-  cacheRequestBody,
   createRequestId,
   enforceSameOrigin,
   errorResponse,
@@ -90,52 +89,6 @@ export default async function handler(request) {
         ),
       }))
       .filter((message) => message.content);
-
-    // Fast preflight. It prevents a cache miss from turning into a
-    // 100-second Parent build inside a synchronous Netlify function.
-    const cacheStatus = await fetchJson(
-      n8nUrl(
-        process.env.N8N_CACHE_WEBHOOK_PATH ||
-          "/webhook/seo-report-snapshot-cache",
-      ),
-      {
-        method: "POST",
-        headers: n8nHeaders(requestId),
-        body: cacheRequestBody({
-          clientId,
-          from,
-          to,
-          view: "ai",
-          action: "status",
-          requestId,
-        }),
-        timeoutMs: 25_000,
-      },
-    );
-
-    const cacheReady =
-      cacheStatus.ok &&
-      cacheStatus.payload?.ok === true &&
-      cacheStatus.payload?.hit === true &&
-      cacheStatus.payload?.cache?.status === "ready";
-
-    if (!cacheReady) {
-      return jsonResponse(
-        {
-          ok: false,
-          pending: true,
-          code: "SNAPSHOT_MISSING",
-          message:
-            "Prepare the analytics snapshot before asking an AI question.",
-          clientId,
-          from,
-          to,
-          requestId,
-        },
-        202,
-        { "retry-after": "8" },
-      );
-    }
 
     const result = await fetchJson(
       n8nUrl(

@@ -87,7 +87,7 @@
   }
 
   async function askAi(input) {
-    const result = await request("/.netlify/functions/ai-chat", {
+    const result = await request("/api/ai-chat", {
       method: "POST",
       body: {
         ...cleanInput(input),
