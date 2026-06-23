@@ -1,0 +1,19 @@
+# Local Netlify folder
+.netlify
+
+# Local API and diagnostic test files
+/ai-*.json
+/ai-*.txt
+/cache-status-request.json
+/clients-*.txt
+/clients-diagnostic.zip
+/ga4-*.json
+/ga4-*.txt
+/gsc-*.json
+/gsc-*.txt
+/missing-*.json
+/missing-*.txt
+/overview-request.json
+/refresh-*.json
+/refresh-*.txt
+/remaining-api-tests.zip
