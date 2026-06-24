@@ -362,3 +362,21 @@
     display: none !important;
   }
 }
+
+.btn-refresh-data {
+  height: 34px;
+  min-height: 34px;
+  align-self: flex-end;
+  white-space: nowrap;
+}
+
+.snapshot-status-pill[data-state="warning"] {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+@media (max-width: 720px) {
+  .ai-chat-launch { right: 16px; bottom: 16px; }
+  .ai-chat-panel { right: 16px; bottom: 74px; }
+}

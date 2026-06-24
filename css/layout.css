@@ -546,8 +546,7 @@ canvas {
 }
 
 @media (max-width:900px) {
-  .sidebar { display:none; }
-  .main { margin-left:0; padding:18px 16px; width:100%; max-width:none; }
+  .main { margin-left:0; padding:70px 16px 18px; width:100%; max-width:none; }
 }
 
 @media (max-width:720px) {
@@ -562,4 +561,84 @@ canvas {
   .main { padding:14px 12px; }
   .kpi-grid { grid-template-columns:1fr 1fr; }
   .report-filter-bar { grid-template-columns:1fr; }
+}
+
+/* Integration stabilization helpers */
+.mobile-nav-toggle {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 130;
+  width: 42px;
+  height: 42px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.mobile-nav-toggle span {
+  display: block;
+  height: 2px;
+  margin: 4px 0;
+  border-radius: 2px;
+  background: var(--text-primary);
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 105;
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-backdrop[hidden] { display: none; }
+
+.nav-item:focus-visible,
+.mobile-nav-toggle:focus-visible,
+.btn-submit:focus-visible,
+.btn-export:focus-visible,
+.btn-refresh-data:focus-visible {
+  outline: 3px solid rgba(255, 107, 53, 0.25);
+  outline-offset: 2px;
+}
+
+.insight-banner-warning {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.insight-banner-warning svg { color: var(--accent-amber); }
+
+#dashboardContent,
+#ga4TabContent {
+  transition: opacity 0.18s ease;
+}
+
+@media (max-width: 900px) {
+  .mobile-nav-toggle { display: block; }
+
+  .sidebar {
+    display: flex;
+    z-index: 120;
+    width: 220px;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+    box-shadow: 18px 0 45px rgba(15, 23, 42, 0.16);
+  }
+
+  body.mobile-nav-open .sidebar { transform: translateX(0); }
+  body.mobile-nav-open { overflow: hidden; }
+
+  .main {
+    padding-top: 70px;
+  }
+}
+
+@media (max-width: 720px) {
+  .btn-refresh-data { grid-column: 1 / -1; width: 100%; }
 }

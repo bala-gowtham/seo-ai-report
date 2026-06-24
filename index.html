@@ -5,21 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SEO Overview Dashboard</title>
   <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/ai-chat.css" />
   <link rel="stylesheet" href="css/print.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="js/netlify-api.js"></script>
   <script defer src="js/data.js"></script>
   <script defer src="js/charts.js"></script>
   <script defer src="js/ui.js"></script>
   <script defer src="js/export.js"></script>
   <script defer src="js/ga4.js"></script>
+  <script defer src="js/netlify-integration.js"></script>
+  <script defer src="js/ai-chat.js"></script>
   <script defer src="js/main.js"></script>
 </head>
 <body>
+  <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Open navigation" aria-controls="primarySidebar" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
 
   <!-- ── Sidebar ───────────────────────────────────────────── -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="primarySidebar" aria-label="Primary navigation">
     <div class="logo">
       <svg class="logo-mark-svg" viewBox="0 0 34 34" fill="none" aria-label="SEO Intel" xmlns="http://www.w3.org/2000/svg">
         <rect width="34" height="34" rx="8" fill="#ff6b35"/>
@@ -31,7 +39,7 @@
     </div>
 
     <div class="nav-section">Analytics</div>
-    <div class="nav-item active" id="navOverview">
+    <div class="nav-item active" id="navOverview" role="button" tabindex="0" aria-label="Overview tab" aria-current="page">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Overview
       <span class="nav-badge">Live</span>
@@ -103,9 +111,9 @@
     </div>
 
     <!-- Error state -->
-    <div id="errorState" class="error-state" style="display:none">
+    <div id="errorState" class="error-state" style="display:none" role="alert">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <p id="errorMessage">Failed to load report. Showing demo data.</p>
+      <p id="errorMessage">The report could not be loaded.</p>
     </div>
 
     <!-- Dashboard content -->
@@ -335,7 +343,7 @@
 
     </div><!-- end #dashboardContent -->
 
-    <!-- ═══ GA4 Lite Tab ════════════════════════════════════ -->
+    <!-- ═══ GA4 Analytics View ═════════════════════════════════ -->
     <div id="ga4TabContent" style="display:none">
 
       <!-- KPI Strip -->

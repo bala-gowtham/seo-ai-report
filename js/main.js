@@ -1,15 +1,17 @@
 document.addEventListener('DOMContentLoaded', async function () {
-  createCharts();
   initReportControls();
   setDefaultDates();
 
-  // Load active clients from Google Sheets via n8n.
-  // Falls back to a demo option if the webhook is unreachable.
-  await loadClientOptions();
+  if (typeof window.Chart === 'function') {
+    createCharts();
+  } else {
+    console.error('Chart.js was not loaded.');
+    emitSnapshotState('error', {
+      message: 'Charts could not be initialized because Chart.js did not load.'
+    });
+  }
 
-  // Load demo data on page open so the dashboard is presentable.
-  // Do NOT call reloadReport() here because that calls n8n.
-  // User must click Generate Report to fetch live data.
+  await loadClientOptions();
   loadDemoPreview();
   initGa4Tab();
 });
