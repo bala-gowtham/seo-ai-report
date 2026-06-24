@@ -1,0 +1,743 @@
+{
+  "name": "SEO Report - AI Assistant Orchestrator - Phase 5.2 Resilient Deterministic Fallback",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "seo-report-ai-assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "fc4a3e50-e2ef-461e-bc6f-9a92ab39a4d0",
+      "name": "AI Assistant Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        4896,
+        1008
+      ],
+      "webhookId": "c046782d-59f5-4576-9b0d-ede17b3596c4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const incoming = ($json.body && typeof $json.body === 'object')\n  ? $json.body\n  : $json;\n\nconst text = (value, max = 2000) =>\n  String(value ?? '').trim().slice(0, max);\n\nconst bool = (value, fallback = false) => {\n  if (value === undefined || value === null || value === '') return fallback;\n  return value === true || ['true', '1', 'yes', 'on'].includes(String(value).trim().toLowerCase());\n};\n\nconst clientId = text(\n  incoming.clientId ??\n  incoming['client-id'] ??\n  incoming.projectId ??\n  incoming['project-id'],\n  120\n).toLowerCase();\n\nconst from = text(incoming.from ?? incoming.startDate, 10);\nconst to = text(incoming.to ?? incoming.endDate, 10);\nconst question = text(incoming.question ?? incoming.message, 2000);\nconst pageContextRaw = text(incoming.pageContext ?? incoming.context ?? 'auto', 30).toLowerCase();\nconst debug = bool(incoming.debug, false);\n\nconst cacheEnabled = bool(incoming.cacheEnabled, true);\nconst forceRefresh = bool(\n  incoming.forceRefresh ??\n  incoming.refresh ??\n  incoming.bypassCache,\n  false\n);\nconst allowStale = bool(incoming.allowStale, false);\nconst cacheSchemaVersion = 'parent-v5-compact-gsc1';\n\nconst allowedContexts = new Set(['auto', 'overview', 'ga4', 'gsc', 'ai']);\nconst pageContext = allowedContexts.has(pageContextRaw) ? pageContextRaw : 'auto';\n\nconst datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;\nconst validDate = (value) => {\n  if (!datePattern.test(value)) return false;\n  const date = new Date(`${value}T00:00:00Z`);\n  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;\n};\n\nconst errors = [];\n\nif (!clientId) errors.push('clientId is required.');\nif (!validDate(from)) errors.push('from must be a valid YYYY-MM-DD date.');\nif (!validDate(to)) errors.push('to must be a valid YYYY-MM-DD date.');\n\nif (validDate(from) && validDate(to)) {\n  const start = new Date(`${from}T00:00:00Z`);\n  const end = new Date(`${to}T00:00:00Z`);\n  const days = Math.floor((end - start) / 86400000) + 1;\n\n  if (start > end) errors.push('from must be on or before to.');\n  if (days > 366) errors.push('The requested date range cannot exceed 366 days.');\n}\n\nif (question.length < 3) {\n  errors.push('question must contain at least 3 characters.');\n}\n\nconst rawConversation = Array.isArray(incoming.conversation)\n  ? incoming.conversation.slice(-8)\n  : [];\n\nconst conversation = rawConversation\n  .map((item) => {\n    const roleRaw = text(item?.role ?? 'user', 20).toLowerCase();\n    const role = roleRaw === 'assistant' || roleRaw === 'model'\n      ? 'assistant'\n      : 'user';\n    const content = text(\n      item?.content ?? item?.text ?? item?.message,\n      1200\n    );\n    return content ? { role, content } : null;\n  })\n  .filter(Boolean);\n\nconst requestId = text(incoming.requestId, 160) ||\n  `ai_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;\n\nreturn [{\n  json: {\n    ok: errors.length === 0,\n    status: errors.length === 0 ? 200 : 400,\n    code: errors.length === 0 ? null : 'VALIDATION_ERROR',\n    errors,\n    requestId,\n    clientId,\n    from,\n    to,\n    question,\n    pageContext,\n    conversation,\n    debug,\n    cacheEnabled,\n    forceRefresh,\n    allowStale,\n    cacheSchemaVersion,\n    directCacheAllowed: cacheEnabled && !forceRefresh,\n    cacheRequest: {\n      action: 'get',\n      clientId,\n      from,\n      to,\n      view: 'ai',\n      schemaVersion: cacheSchemaVersion,\n      allowStale,\n      requestId\n    },\n    parentRequest: {\n      'client-id': clientId,\n      from,\n      to,\n      view: 'ai',\n      debug,\n      cacheEnabled,\n      forceRefresh,\n      allowStale\n    }\n  }\n}];"
+      },
+      "id": "ea3c3873-b4f6-4708-ada0-8519c0645613",
+      "name": "Validate & Normalize Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5136,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fe091497-2593-4f30-81d2-fe939523b39b",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1c567e67-3d1b-45c1-a794-05c8e27e6c46",
+      "name": "Request Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5376,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, code: $json.code || 'VALIDATION_ERROR', errors: $json.errors || ['Invalid request.'], requestId: $json.requestId } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "34d7bc51-83c1-468f-8084-b670fc636d3e",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        5632,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://balsgowtham-n8n.hf.space/webhook/seo-report-orchestrator",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($('Validate & Normalize Request').first().json.parentRequest) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "de751383-e6d7-4353-9416-43817dfc85dc",
+      "name": "Fetch Parent AI Evidence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        6352,
+        1008
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $input.first().json || {};\nconst request = $('Validate & Normalize Request').first().json;\n\nconst directCacheHit =\n  source.ok === true &&\n  source.hit === true &&\n  source.payload &&\n  typeof source.payload === 'object';\n\nconst parent = directCacheHit ? source.payload : source;\n\nconst evidenceCache = directCacheHit\n  ? {\n      source: 'snapshot_cache',\n      hit: true,\n      stale: source.cache?.stale === true,\n      snapshotKey: source.cache?.snapshotKey || null,\n      cacheKey: source.cache?.cacheKey || null,\n      generationId: source.cache?.generationId || null,\n      generatedAt: source.cache?.generatedAt || null,\n      expiresAt: source.cache?.expiresAt || null,\n      schemaVersion: source.cache?.schemaVersion || request.cacheSchemaVersion\n    }\n  : {\n      source: 'parent_orchestrator',\n      hit: parent.meta?.cache?.hit === true,\n      stale: parent.meta?.cache?.stale === true,\n      stored: parent.meta?.cache?.stored === true,\n      snapshotKey: parent.meta?.cache?.snapshotKey || null,\n      cacheKey: parent.meta?.cache?.cacheKey || null,\n      generationId: parent.meta?.cache?.generationId || null,\n      generatedAt: parent.meta?.cache?.generatedAt || null,\n      expiresAt: parent.meta?.cache?.expiresAt || null,\n      schemaVersion: parent.meta?.cache?.schemaVersion || request.cacheSchemaVersion\n    };\n\nif (parent.ok !== true || !parent.analyticsEvidence) {\n  return [{\n    json: {\n      ready: false,\n      status: 502,\n      code: 'ANALYTICS_EVIDENCE_ERROR',\n      error:\n        parent.error ||\n        source.error ||\n        'Cached evidence was unavailable and the Parent Orchestrator did not return AI analytics evidence.',\n      requestId: request.requestId,\n      evidenceCache,\n      parentResponse: request.debug ? source : undefined\n    }\n  }];\n}\n\nconst ga4 = parent.analyticsEvidence.ga4 || {};\nconst gsc = parent.analyticsEvidence.gsc || {};\nconst rootKpis = parent.kpis || {};\nconst q = request.question.toLowerCase();\n\nconst containsAny = (terms) => terms.some((term) => q.includes(term));\n\nlet intent = 'combined_overview';\nlet domain = 'combined';\n\nconst aiTerms = [\n  'chatgpt', 'gemini', 'perplexity', 'copilot', 'claude',\n  'ai traffic', 'ai referral', 'ai assistant', 'llm', 'aeo'\n];\nconst landingTerms = [\n  'landing page', 'landing pages', 'landed on', 'landing url',\n  'landing urls', 'which page', 'which pages', 'specific page',\n  'specific pages', 'receiving traffic', 'top page', 'top pages'\n];\nconst sourceTerms = [\n  'source', 'sources', 'came from', 'coming from', 'originated from',\n  'referrer', 'referrers', 'referral source', 'traffic source'\n];\n\nconst hasAiTerm = containsAny(aiTerms);\nconst hasLandingTerm = containsAny(landingTerms);\nconst hasSourceTerm = containsAny(sourceTerms);\nconst asksWhereAiCameFrom =\n  hasAiTerm &&\n  (\n    /^where\\b/.test(q) ||\n    /\\bwhere\\s+(?:did|does|is|was|were)?\\s*.*\\b(?:ai|chatgpt|gemini|perplexity|copilot|claude)\\b/.test(q) ||\n    /\\b(?:ai|chatgpt|gemini|perplexity|copilot|claude).*\\b(?:came|coming|originated)\\s+from\\b/.test(q)\n  );\nconst asksForAiLandingPages =\n  hasAiTerm &&\n  (hasLandingTerm || /\\b(?:landing|landed|page|pages|url|urls)\\b/.test(q));\n\nif (asksForAiLandingPages) {\n  intent = 'ai_landing_pages';\n  domain = 'ga4';\n} else if (hasAiTerm && (hasSourceTerm || asksWhereAiCameFrom)) {\n  intent = 'ai_sources';\n  domain = 'ga4';\n} else if (hasAiTerm) {\n  intent = 'ai_traffic';\n  domain = 'ga4';\n} else if (containsAny(['conversion', 'conversions', 'engagement', 'engaged', 'duration', 'bounce'])) {\n  intent = 'conversions_engagement';\n  domain = 'ga4';\n} else if (containsAny(['channel', 'source', 'medium', 'referral', 'direct traffic', 'organic social', 'paid search'])) {\n  intent = 'channels_sources';\n  domain = 'ga4';\n} else if (containsAny(['device', 'desktop', 'mobile', 'tablet', 'country', 'countries', 'location', 'geography'])) {\n  intent = 'devices_countries';\n  domain = request.pageContext === 'gsc' ? 'gsc' : 'combined';\n} else if (containsAny(['landing page', 'landing pages', 'page lost', 'page gained', 'pages lost', 'pages gained', 'best page', 'worst page'])) {\n  intent = 'landing_pages';\n  domain = containsAny(['click', 'impression', 'position', 'ranking', 'gsc', 'search']) ? 'gsc' : 'combined';\n} else if (containsAny(['keyword', 'keywords', 'query', 'queries', 'ranking', 'rankings', 'position', 'ctr', 'impression', 'search console', 'gsc'])) {\n  intent = 'queries_keywords';\n  domain = 'gsc';\n} else if (containsAny(['session', 'sessions', 'user', 'users', 'traffic', 'analytics', 'ga4'])) {\n  intent = 'ga4_performance';\n  domain = 'ga4';\n}\n\nif (request.pageContext === 'gsc') {\n  if (intent === 'combined_overview') intent = 'gsc_visibility';\n  if (['gsc_visibility', 'landing_pages', 'devices_countries'].includes(intent)) domain = 'gsc';\n}\nif (request.pageContext === 'ga4') {\n  if (intent === 'combined_overview') intent = 'ga4_performance';\n  if (['ga4_performance', 'landing_pages', 'devices_countries'].includes(intent)) domain = 'ga4';\n}\nif (request.pageContext === 'ai') {\n  if (!['ai_traffic', 'ai_sources', 'ai_landing_pages'].includes(intent)) {\n    intent = 'ai_traffic';\n  }\n  domain = 'ga4';\n}\n\nconst stopWords = new Set([\n  'what', 'which', 'where', 'when', 'why', 'how', 'the', 'a', 'an', 'and', 'or',\n  'of', 'to', 'for', 'in', 'on', 'with', 'from', 'most', 'more', 'less', 'show',\n  'tell', 'give', 'me', 'our', 'this', 'that', 'these', 'those', 'during', 'period',\n  'current', 'previous', 'month', 'report', 'data', 'performance'\n]);\n\nconst tokens = [...new Set(\n  q.replace(/[^\\p{L}\\p{N}\\s/_-]/gu, ' ')\n    .split(/\\s+/)\n    .map((token) => token.trim())\n    .filter((token) => token.length >= 3 && !stopWords.has(token))\n)].slice(0, 15);\n\nconst num = (value) => {\n  const n = Number(value);\n  return Number.isFinite(n) ? n : null;\n};\n\nconst pick = (obj, keys) => {\n  const result = {};\n  for (const key of keys) {\n    if (obj && obj[key] !== undefined && obj[key] !== null) result[key] = obj[key];\n  }\n  return result;\n};\n\nconst compactGa4 = (row) => pick(row, [\n  'name', 'source', 'medium', 'landingPage', 'country', 'device',\n  'sessions', 'prevSessions', 'sessionsChange', 'users', 'prevUsers',\n  'newUsers', 'prevNewUsers', 'engagedSessions', 'prevEngagedSessions',\n  'engagementRate', 'prevEngagementRate', 'conversions', 'prevConversions',\n  'pageViews', 'prevPageViews', 'averageSessionDuration',\n  'prevAverageSessionDuration', 'status', 'classificationConfidence'\n]);\n\nconst compactGsc = (row) => pick(row, [\n  'query', 'page', 'name', 'country', 'device', 'searchAppearance',\n  'clicks', 'prevClicks', 'clickDelta', 'clicksChange',\n  'impressions', 'prevImpressions', 'impressionDelta', 'impressionsChange',\n  'ctr', 'prevCtr', 'ctrChange', 'position', 'prevPosition',\n  'positionChange', 'status', 'classificationConfidence'\n]);\n\nconst scoreRow = (row) => {\n  if (!tokens.length) return 0;\n  const haystack = [\n    row?.name, row?.query, row?.page, row?.landingPage,\n    row?.source, row?.medium, row?.country, row?.device\n  ].filter(Boolean).join(' ').toLowerCase();\n  return tokens.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);\n};\n\nconst selectRows = (rows, limit, compact) => {\n  const source = Array.isArray(rows) ? rows : [];\n  if (!tokens.length) return source.slice(0, limit).map(compact);\n  const scored = source.map((row, index) => ({ row, index, score: scoreRow(row) }));\n  const matched = scored.filter((item) => item.score > 0)\n    .sort((a, b) => b.score - a.score || a.index - b.index)\n    .slice(0, limit);\n  if (matched.length >= Math.min(3, limit)) return matched.map((item) => compact(item.row));\n  const used = new Set(matched.map((item) => item.index));\n  const fill = scored.filter((item) => !used.has(item.index)).slice(0, limit - matched.length);\n  return [...matched, ...fill].map((item) => compact(item.row));\n};\n\nconst sortRows = (rows, field, desc = true) =>\n  [...(Array.isArray(rows) ? rows : [])].sort((a, b) => {\n    const av = num(a?.[field]) ?? 0;\n    const bv = num(b?.[field]) ?? 0;\n    return desc ? bv - av : av - bv;\n  });\n\nconst selected = {\n  ga4: {\n    kpis: ga4.kpis || {},\n    channelLeaders: [],\n    landingPages: [],\n    sourceMedium: [],\n    devices: [],\n    countries: [],\n    aiAssistantTraffic: null,\n    dataQuality: ga4.dataQuality || null,\n    warnings: Array.isArray(ga4.warnings) ? ga4.warnings.slice(0, 8) : []\n  },\n  gsc: {\n    totals: gsc.totals || {},\n    queryWinners: [],\n    queryLosers: [],\n    pageWinners: [],\n    pageLosers: [],\n    rankingGainers: [],\n    rankingLosers: [],\n    ctrGainers: [],\n    ctrLosers: [],\n    opportunities: [],\n    devices: [],\n    countries: [],\n    pageQueries: [],\n    positionBuckets: Array.isArray(gsc.positionBuckets) ? gsc.positionBuckets : [],\n    queryStatusCounts: gsc.queryStatusCounts || {},\n    pageStatusCounts: gsc.pageStatusCounts || {},\n    coverage: gsc.coverage || {},\n    dataQuality: gsc.dataQuality || null,\n    warnings: Array.isArray(gsc.warnings) ? gsc.warnings.slice(0, 8) : []\n  }\n};\n\nif (domain === 'ga4' || domain === 'combined') {\n  selected.ga4.channelLeaders = selectRows(ga4.channelLeaders, intent === 'channels_sources' ? 12 : 7, compactGa4);\n  selected.ga4.landingPages = selectRows(ga4.landingPages, intent === 'landing_pages' ? 10 : 7, compactGa4);\n  selected.ga4.sourceMedium = selectRows(ga4.sourceMedium, intent === 'channels_sources' ? 10 : 7, compactGa4);\n  selected.ga4.devices = selectRows(ga4.devices, 5, compactGa4);\n  selected.ga4.countries = selectRows(ga4.countries, intent === 'devices_countries' ? 10 : 6, compactGa4);\n  selected.ga4.aiAssistantTraffic = ga4.aiAssistantTraffic || null;\n}\n\nif (domain === 'gsc' || domain === 'combined') {\n  selected.gsc.queryWinners = selectRows(gsc.queryWinners, intent === 'queries_keywords' ? 10 : 6, compactGsc);\n  selected.gsc.queryLosers = selectRows(gsc.queryLosers, intent === 'queries_keywords' ? 10 : 6, compactGsc);\n  selected.gsc.pageWinners = selectRows(gsc.pageWinners, intent === 'landing_pages' ? 8 : 5, compactGsc);\n  selected.gsc.pageLosers = selectRows(gsc.pageLosers, intent === 'landing_pages' ? 8 : 5, compactGsc);\n  selected.gsc.rankingGainers = selectRows(gsc.rankingGainers, intent === 'queries_keywords' ? 8 : 5, compactGsc);\n  selected.gsc.rankingLosers = selectRows(gsc.rankingLosers, intent === 'queries_keywords' ? 8 : 5, compactGsc);\n  selected.gsc.ctrGainers = selectRows(gsc.ctrGainers, 6, compactGsc);\n  selected.gsc.ctrLosers = selectRows(gsc.ctrLosers, 6, compactGsc);\n  selected.gsc.opportunities = selectRows(gsc.opportunities, 12, compactGsc);\n  selected.gsc.devices = selectRows(gsc.devices, 5, compactGsc);\n  selected.gsc.countries = selectRows(gsc.countries, intent === 'devices_countries' ? 10 : 6, compactGsc);\n  selected.gsc.pageQueries = selectRows(gsc.pageQueries, intent === 'landing_pages' || intent === 'queries_keywords' ? 10 : 6, compactGsc);\n}\n\nif (intent === 'conversions_engagement') {\n  selected.ga4.channelLeaders = sortRows(ga4.channelLeaders, 'conversions').slice(0, 8).map(compactGa4);\n  selected.ga4.landingPages = sortRows(ga4.landingPages, 'conversions').slice(0, 10).map(compactGa4);\n}\n\nif (['ai_traffic', 'ai_sources', 'ai_landing_pages'].includes(intent)) {\n  selected.ga4 = {\n    kpis: ga4.kpis || {},\n    channelLeaders: [],\n    landingPages: [],\n    sourceMedium: [],\n    devices: [],\n    countries: [],\n    aiAssistantTraffic: ga4.aiAssistantTraffic || null,\n    dataQuality: ga4.dataQuality || null,\n    warnings: Array.isArray(ga4.warnings) ? ga4.warnings.slice(0, 8) : []\n  };\n  selected.gsc = {\n    totals: {},\n    dataQuality: gsc.dataQuality || null,\n    warnings: Array.isArray(gsc.warnings) ? gsc.warnings.slice(0, 4) : []\n  };\n}\n\nconst facts = [];\nconst addFact = (source, statement, data = {}, reliability = 'high') => {\n  const id = `F${facts.length + 1}`;\n  facts.push({ id, source, statement, data, reliability });\n  return id;\n};\n\nconst kpiLabels = {\n  totalUsers: 'Total users',\n  newUsers: 'New users',\n  totalPageViews: 'Page views',\n  conversions: 'Conversions',\n  aiTraffic: 'AI referral sessions',\n  sessions: 'Sessions',\n  engagedSessions: 'Engaged sessions',\n  engagementRate: 'Engagement rate',\n  averageSessionDuration: 'Average session duration',\n  gscClicks: 'GSC clicks',\n  gscImpressions: 'GSC impressions',\n  avgCtr: 'Average CTR',\n  avgPosition: 'Average position',\n  keywordsTop3: 'Keywords in positions 1 to 3 within returned rows',\n  keywordsTop10: 'Keywords in positions 1 to 10 within returned rows',\n  keywordsTop20: 'Keywords in positions 1 to 20 within returned rows',\n  opportunityCount: 'Opportunity queries within returned rows'\n};\n\nconst aiSpecificIntent = ['ai_traffic', 'ai_sources', 'ai_landing_pages'].includes(intent);\n\nconst allowedKpis = aiSpecificIntent\n  ? []\n  : domain === 'ga4'\n    ? ['totalUsers', 'newUsers', 'sessions', 'engagedSessions', 'engagementRate', 'averageSessionDuration', 'conversions', 'aiTraffic']\n    : domain === 'gsc'\n      ? ['gscClicks', 'gscImpressions', 'avgCtr', 'avgPosition', 'keywordsTop3', 'keywordsTop10', 'keywordsTop20', 'opportunityCount']\n      : ['totalUsers', 'sessions', 'engagementRate', 'conversions', 'gscClicks', 'gscImpressions', 'avgCtr', 'avgPosition'];\n\nfor (const key of allowedKpis) {\n  const item = rootKpis[key];\n  if (!item) continue;\n  addFact(\n    key.startsWith('gsc') || ['avgCtr', 'avgPosition', 'keywordsTop3', 'keywordsTop10', 'keywordsTop20', 'opportunityCount'].includes(key) ? 'GSC' : 'GA4',\n    `${kpiLabels[key] || key}: ${item.value}${item.suffix || ''}, previous ${item.prev}${item.suffix || ''}, reported change ${item.change}${item.changeSuffix || ''}.`,\n    { metric: key, current: item.value, previous: item.prev, change: item.change, suffix: item.suffix || '', changeSuffix: item.changeSuffix || '' },\n    key.startsWith('keywords') || key === 'opportunityCount' ? 'limited_when_rows_truncated' : 'high'\n  );\n}\n\nconst rowFact = (source, row, label) => {\n  const name = row.name || row.query || row.page || row.landingPage || row.country || row.device || 'Unknown';\n  const statementParts = [`${label} \"${name}\"`];\n\n  if (row.sessions !== undefined) {\n    statementParts.push(`${row.sessions} session${Number(row.sessions) === 1 ? '' : 's'} vs ${row.prevSessions ?? 0}`);\n  }\n  if (row.sessionsChange !== undefined && row.sessionsChange !== null) {\n    statementParts.push(`reported session change ${row.sessionsChange}%`);\n  }\n\n  if (row.clicks !== undefined) {\n    statementParts.push(`${row.clicks} clicks vs ${row.prevClicks ?? 0}`);\n  }\n  if (row.clickDelta !== undefined && row.clickDelta !== null) {\n    statementParts.push(`reported click delta ${row.clickDelta}`);\n  }\n  if (row.clicksChange !== undefined && row.clicksChange !== null) {\n    statementParts.push(`reported click change ${row.clicksChange}%`);\n  }\n\n  if (row.impressions !== undefined) {\n    statementParts.push(`${row.impressions} impressions vs ${row.prevImpressions ?? 0}`);\n  }\n  if (row.impressionDelta !== undefined && row.impressionDelta !== null) {\n    statementParts.push(`reported impression delta ${row.impressionDelta}`);\n  }\n  if (row.impressionsChange !== undefined && row.impressionsChange !== null) {\n    statementParts.push(`reported impression change ${row.impressionsChange}%`);\n  }\n\n  if (row.engagementRate !== undefined) {\n    statementParts.push(`${row.engagementRate}% engagement rate`);\n  }\n  if (row.conversions !== undefined) {\n    statementParts.push(`${row.conversions} conversions`);\n  }\n\n  if (row.position !== undefined) {\n    statementParts.push(`position ${row.position} vs ${row.prevPosition ?? 0}`);\n  }\n  if (row.positionChange !== undefined && row.positionChange !== null) {\n    statementParts.push(`reported position change ${row.positionChange} positions`);\n  }\n\n  if (row.ctr !== undefined) {\n    statementParts.push(`${row.ctr}% CTR vs ${row.prevCtr ?? 0}%`);\n  }\n  if (row.ctrChange !== undefined && row.ctrChange !== null) {\n    statementParts.push(`reported CTR change ${row.ctrChange} percentage points`);\n  }\n\n  return addFact(\n    source,\n    `${statementParts.join(', ')}.`,\n    row,\n    row.classificationConfidence || 'high'\n  );\n};\n\nif (intent === 'channels_sources' || intent === 'ga4_performance' || intent === 'combined_overview') {\n  selected.ga4.channelLeaders.slice(0, 5).forEach((row) => rowFact('GA4', row, 'Channel'));\n  selected.ga4.sourceMedium.slice(0, 5).forEach((row) => rowFact('GA4', row, 'Source/medium'));\n}\nif (intent === 'landing_pages' || intent === 'ga4_performance' || intent === 'combined_overview') {\n  selected.ga4.landingPages.slice(0, 5).forEach((row) => rowFact('GA4', row, 'Landing page'));\n  selected.gsc.pageWinners.slice(0, 4).forEach((row) => rowFact('GSC', row, 'Page winner'));\n  selected.gsc.pageLosers.slice(0, 4).forEach((row) => rowFact('GSC', row, 'Page loser'));\n}\nif (intent === 'queries_keywords' || intent === 'gsc_visibility' || intent === 'combined_overview') {\n  // Put losses first so the most decision-relevant facts remain inside\n  // the deterministic-fact cap.\n  selected.gsc.queryLosers\n    .slice(0, 5)\n    .forEach((row) => rowFact('GSC', row, 'Query loser'));\n\n  selected.gsc.rankingLosers\n    .slice(0, 5)\n    .forEach((row) => rowFact('GSC', row, 'Ranking loser'));\n\n  selected.gsc.queryWinners\n    .slice(0, 3)\n    .forEach((row) => rowFact('GSC', row, 'Query winner'));\n\n  selected.gsc.rankingGainers\n    .slice(0, 3)\n    .forEach((row) => rowFact('GSC', row, 'Ranking gainer'));\n\n  selected.gsc.ctrLosers\n    .slice(0, 3)\n    .forEach((row) => rowFact('GSC', row, 'CTR loser'));\n\n  selected.gsc.ctrGainers\n    .slice(0, 3)\n    .forEach((row) => rowFact('GSC', row, 'CTR gainer'));\n\n  selected.gsc.opportunities\n    .slice(0, 3)\n    .forEach((row) => rowFact('GSC', row, 'Opportunity query'));\n}\nif (intent === 'conversions_engagement') {\n  selected.ga4.channelLeaders.slice(0, 6).forEach((row) => rowFact('GA4', row, 'Channel'));\n  selected.ga4.landingPages.slice(0, 6).forEach((row) => rowFact('GA4', row, 'Landing page'));\n}\nif (intent === 'devices_countries') {\n  selected.ga4.devices.slice(0, 5).forEach((row) => rowFact('GA4', row, 'Device'));\n  selected.ga4.countries.slice(0, 8).forEach((row) => rowFact('GA4', row, 'Country'));\n  selected.gsc.devices.slice(0, 5).forEach((row) => rowFact('GSC', row, 'Device'));\n  selected.gsc.countries.slice(0, 8).forEach((row) => rowFact('GSC', row, 'Country'));\n}\nif (['ai_traffic', 'ai_sources', 'ai_landing_pages'].includes(intent)) {\n  const aiTraffic = ga4.aiAssistantTraffic || {};\n  const aiKpis = aiTraffic.kpis || {};\n  const preferredKpis = [\n    'sessions', 'users', 'engagedSessions', 'engagementRate',\n    'conversions', 'newUsers', 'pageViews', 'averageSessionDuration'\n  ];\n  const aiKpiLabels = {\n    sessions: 'sessions',\n    users: 'users',\n    engagedSessions: 'engaged sessions',\n    engagementRate: 'engagement rate',\n    conversions: 'conversions',\n    newUsers: 'new users',\n    pageViews: 'page views',\n    averageSessionDuration: 'average session duration'\n  };\n\n  for (const key of preferredKpis) {\n    const item = aiKpis[key];\n    if (!item || typeof item !== 'object' || item.value === undefined) continue;\n    addFact(\n      'GA4 AI referral traffic',\n      `AI referral ${aiKpiLabels[key] || key}: ${item.value}${item.suffix || ''}, previous ${item.prev ?? 0}${item.suffix || ''}, reported change ${item.change ?? 0}${item.changeSuffix || ''}.`,\n      { metric: key, ...item }\n    );\n  }\n\n  const sourceRows = (aiTraffic.sources || []).map(compactGa4);\n  const landingRows = (aiTraffic.landingPages || []).map(compactGa4);\n\n  if (intent === 'ai_landing_pages' && landingRows.length === 0) {\n    addFact(\n      'GA4 AI referral traffic',\n      'No AI referral landing-page rows were available in the cached GA4 evidence for the selected period.',\n      { dataset: 'aiLandingPages', availableRows: 0 }\n    );\n  }\n  if (intent === 'ai_sources' && sourceRows.length === 0) {\n    addFact(\n      'GA4 AI referral traffic',\n      'No AI referral source rows were available in the cached GA4 evidence for the selected period.',\n      { dataset: 'aiSources', availableRows: 0 }\n    );\n  }\n\n  if (intent === 'ai_landing_pages') {\n    landingRows.slice(0, 12).forEach((row) =>\n      rowFact('GA4 AI referral traffic', row, 'AI referral landing page')\n    );\n  } else if (intent === 'ai_sources') {\n    sourceRows.slice(0, 12).forEach((row) =>\n      rowFact('GA4 AI referral traffic', row, 'AI referral source')\n    );\n  } else {\n    sourceRows.slice(0, 8).forEach((row) =>\n      rowFact('GA4 AI referral traffic', row, 'AI referral source')\n    );\n    landingRows.slice(0, 5).forEach((row) =>\n      rowFact('GA4 AI referral traffic', row, 'AI referral landing page')\n    );\n  }\n}\n\nconst ga4DataQuality = ga4.dataQuality || {};\nconst gscDataQuality = gsc.dataQuality || {};\n\nconst ga4TruncatedReports = Array.isArray(ga4DataQuality.truncatedReports)\n  ? ga4DataQuality.truncatedReports\n  : [];\nconst gscLimitHits = Array.isArray(gscDataQuality.limitHits)\n  ? gscDataQuality.limitHits\n  : [];\n\nconst ga4ReportsByIntent = {\n  ai_traffic: ['aiSources', 'aiLandingPages', 'aiCountries'],\n  ai_sources: ['aiSources'],\n  ai_landing_pages: ['aiLandingPages'],\n  conversions_engagement: ['channels', 'landingPages'],\n  channels_sources: ['channels', 'sourceMedium'],\n  devices_countries: ['countries'],\n  landing_pages: ['landingPages'],\n  ga4_performance: ['channels', 'landingPages', 'sourceMedium'],\n  combined_overview: ['channels', 'landingPages', 'sourceMedium', 'countries']\n};\n\nconst gscDatasetsByIntent = {\n  queries_keywords: ['queries', 'pageQueries'],\n  gsc_visibility: ['queries', 'pageQueries'],\n  devices_countries: ['countries', 'devices'],\n  landing_pages: ['queries', 'pageQueries'],\n  combined_overview: ['queries', 'countries', 'pageQueries']\n};\n\nconst ga4RelevantReports = new Set(\n  ga4ReportsByIntent[intent] || ga4ReportsByIntent.ga4_performance\n);\nconst gscRelevantDatasets = new Set(\n  gscDatasetsByIntent[intent] || gscDatasetsByIntent.gsc_visibility\n);\n\nconst relevantGa4Truncations = ga4TruncatedReports.filter((item) =>\n  ga4RelevantReports.has(String(item?.report || ''))\n);\nconst relevantGscLimitHits = gscLimitHits.filter((item) =>\n  gscRelevantDatasets.has(String(item?.dataset || ''))\n);\n\nconst usesGa4 = domain === 'ga4' || domain === 'combined';\nconst usesGsc = domain === 'gsc' || domain === 'combined';\n\nconst ga4EvidencePartial =\n  usesGa4 &&\n  (\n    relevantGa4Truncations.length > 0 ||\n    (\n      ga4DataQuality.partial === true &&\n      ga4TruncatedReports.length === 0\n    )\n  );\n\nconst gscEvidencePartial =\n  usesGsc &&\n  (\n    relevantGscLimitHits.length > 0 ||\n    (\n      gscDataQuality.partial === true &&\n      gscLimitHits.length === 0\n    )\n  );\n\nconst evidencePartial = ga4EvidencePartial || gscEvidencePartial;\n\nconst limitations = [];\nconst addLimitation = (message) => {\n  const value = String(message || '').trim();\n  if (value && !limitations.includes(value)) limitations.push(value);\n};\n\nconst periodsFor = (rows) => {\n  const periods = [...new Set(\n    rows.map((item) => String(item?.period || '').trim()).filter(Boolean)\n  )];\n  if (!periods.length) return '';\n  if (periods.length === 1) return ` for the ${periods[0]} period`;\n  return ' for the current and previous periods';\n};\n\nif (usesGa4) {\n  const ga4Labels = {\n    landingPages: 'landing-page',\n    sourceMedium: 'source/medium',\n    countries: 'country',\n    channels: 'channel',\n    aiSources: 'AI-source',\n    aiLandingPages: 'AI landing-page',\n    aiCountries: 'AI-country'\n  };\n\n  for (const report of ga4RelevantReports) {\n    const rows = relevantGa4Truncations.filter((item) => item.report === report);\n    if (!rows.length) continue;\n    const label = ga4Labels[report] || report;\n    addLimitation(\n      `GA4 ${label} rows reached configured limits${periodsFor(rows)}, so this part of the evidence is partial.`\n    );\n  }\n\n  if (['ai_traffic', 'ai_sources', 'ai_landing_pages'].includes(intent)) {\n    const aiWarning = (Array.isArray(ga4.warnings) ? ga4.warnings : [])\n      .find((item) => ['ai-assistant', 'ai assistant', 'ai referral'].some((term) => String(item).toLowerCase().includes(term)));\n    if (aiWarning) addLimitation(aiWarning);\n\n    const aiTraffic = ga4.aiAssistantTraffic || {};\n    if (intent === 'ai_landing_pages' && !(Array.isArray(aiTraffic.landingPages) && aiTraffic.landingPages.length)) {\n      addLimitation('No AI referral landing-page rows were available in the cached GA4 evidence for the selected period.');\n    }\n    if (intent === 'ai_sources' && !(Array.isArray(aiTraffic.sources) && aiTraffic.sources.length)) {\n      addLimitation('No AI referral source rows were available in the cached GA4 evidence for the selected period.');\n    }\n  }\n}\n\nif (usesGsc) {\n  const queryBasedIntent = ['queries_keywords', 'gsc_visibility', 'landing_pages', 'combined_overview'].includes(intent);\n\n  if (queryBasedIntent) {\n    addLimitation(\n      'Search Console can omit anonymized or low-volume query rows, so detailed query totals may not match property-level KPI totals.'\n    );\n    addLimitation(\n      'Page and query dimensions can be less complete than property-level Search Console totals.'\n    );\n  }\n\n  const gscLabels = {\n    queries: 'query',\n    countries: 'country',\n    pageQueries: 'page-query',\n    devices: 'device'\n  };\n\n  for (const dataset of gscRelevantDatasets) {\n    const rows = relevantGscLimitHits.filter((item) => item.dataset === dataset);\n    if (!rows.length) continue;\n    const label = gscLabels[dataset] || dataset;\n    addLimitation(\n      `GSC ${label} rows reached the configured limit${periodsFor(rows)}, so this part of the evidence is partial.`\n    );\n  }\n}\n\nif (evidencePartial && limitations.length === 0) {\n  addLimitation(\n    'The evidence used for this answer is partial because a relevant source reached a configured row limit.'\n  );\n}\n\nconst compactQuality = {\n  partial: evidencePartial,\n  overallParentPartial: parent.partial === true,\n  limitations: limitations.slice(0, 6)\n};\n\nlet promptSelectedEvidence = {};\n\nif (intent === 'landing_pages' && domain === 'gsc') {\n  promptSelectedEvidence = {\n    gsc: {\n      totals: selected.gsc.totals,\n      pageWinners: selected.gsc.pageWinners.slice(0, 6),\n      pageLosers: selected.gsc.pageLosers.slice(0, 8),\n      pageQueries: selected.gsc.pageQueries.slice(0, 8),\n      opportunities: selected.gsc.opportunities.slice(0, 5)\n    }\n  };\n} else if (intent === 'landing_pages' && domain === 'ga4') {\n  promptSelectedEvidence = {\n    ga4: {\n      kpis: selected.ga4.kpis,\n      landingPages: selected.ga4.landingPages.slice(0, 10)\n    }\n  };\n} else if (intent === 'landing_pages') {\n  promptSelectedEvidence = {\n    ga4: {\n      kpis: selected.ga4.kpis,\n      landingPages: selected.ga4.landingPages.slice(0, 6)\n    },\n    gsc: {\n      totals: selected.gsc.totals,\n      pageWinners: selected.gsc.pageWinners.slice(0, 5),\n      pageLosers: selected.gsc.pageLosers.slice(0, 6)\n    }\n  };\n} else if (intent === 'queries_keywords' || intent === 'gsc_visibility') {\n  promptSelectedEvidence = {\n    gsc: {\n      totals: selected.gsc.totals,\n      queryWinners: selected.gsc.queryWinners.slice(0, 8),\n      queryLosers: selected.gsc.queryLosers.slice(0, 8),\n      rankingGainers: selected.gsc.rankingGainers.slice(0, 6),\n      rankingLosers: selected.gsc.rankingLosers.slice(0, 6),\n      ctrGainers: selected.gsc.ctrGainers.slice(0, 4),\n      ctrLosers: selected.gsc.ctrLosers.slice(0, 4),\n      opportunities: selected.gsc.opportunities.slice(0, 6)\n    }\n  };\n} else if (intent === 'channels_sources') {\n  promptSelectedEvidence = {\n    ga4: {\n      kpis: selected.ga4.kpis,\n      channelLeaders: selected.ga4.channelLeaders.slice(0, 8),\n      sourceMedium: selected.ga4.sourceMedium.slice(0, 10)\n    }\n  };\n} else if (intent === 'conversions_engagement' || intent === 'ga4_performance') {\n  promptSelectedEvidence = {\n    ga4: {\n      kpis: selected.ga4.kpis,\n      channelLeaders: selected.ga4.channelLeaders.slice(0, 7),\n      landingPages: selected.ga4.landingPages.slice(0, 8)\n    }\n  };\n} else if (intent === 'devices_countries') {\n  promptSelectedEvidence = {\n    ga4: domain !== 'gsc' ? {\n      devices: selected.ga4.devices.slice(0, 5),\n      countries: selected.ga4.countries.slice(0, 8)\n    } : undefined,\n    gsc: domain !== 'ga4' ? {\n      devices: selected.gsc.devices.slice(0, 5),\n      countries: selected.gsc.countries.slice(0, 8)\n    } : undefined\n  };\n} else if (intent === 'ai_landing_pages') {\n  promptSelectedEvidence = {\n    ga4: {\n      aiReferralTraffic: {\n        kpis: selected.ga4.aiAssistantTraffic?.kpis || {},\n        landingPages: selected.ga4.aiAssistantTraffic?.landingPages || [],\n        coverage: selected.ga4.aiAssistantTraffic?.coverage?.landingPages || null\n      }\n    }\n  };\n} else if (intent === 'ai_sources') {\n  promptSelectedEvidence = {\n    ga4: {\n      aiReferralTraffic: {\n        kpis: selected.ga4.aiAssistantTraffic?.kpis || {},\n        sources: selected.ga4.aiAssistantTraffic?.sources || [],\n        coverage: selected.ga4.aiAssistantTraffic?.coverage?.sources || null\n      }\n    }\n  };\n} else if (intent === 'ai_traffic') {\n  promptSelectedEvidence = {\n    ga4: {\n      aiReferralTraffic: selected.ga4.aiAssistantTraffic\n    }\n  };\n} else {\n  promptSelectedEvidence = {\n    ga4: {\n      kpis: selected.ga4.kpis,\n      channelLeaders: selected.ga4.channelLeaders.slice(0, 4),\n      landingPages: selected.ga4.landingPages.slice(0, 4)\n    },\n    gsc: {\n      totals: selected.gsc.totals,\n      queryWinners: selected.gsc.queryWinners.slice(0, 4),\n      queryLosers: selected.gsc.queryLosers.slice(0, 4),\n      pageWinners: selected.gsc.pageWinners.slice(0, 4),\n      pageLosers: selected.gsc.pageLosers.slice(0, 4)\n    }\n  };\n}\n\nconst cappedFacts = facts.slice(0, 28);\nconst aiTrafficEvidence = ga4.aiAssistantTraffic || {};\nconst aiSourceRows = Array.isArray(aiTrafficEvidence.sources)\n  ? aiTrafficEvidence.sources.map(compactGa4).slice(0, 12)\n  : [];\nconst aiLandingRows = Array.isArray(aiTrafficEvidence.landingPages)\n  ? aiTrafficEvidence.landingPages.map(compactGa4).slice(0, 12)\n  : [];\nconst aiKpis = aiTrafficEvidence.kpis || {};\n\nconst rowIdentity = (row) => String(\n  row?.landingPage ||\n  row?.name ||\n  [row?.source, row?.medium].filter(Boolean).join(' / ')\n).trim().toLowerCase();\n\nconst factIdForRow = (row) => {\n  const identity = rowIdentity(row);\n  if (!identity) return null;\n  const match = cappedFacts.find((fact) => rowIdentity(fact?.data) === identity);\n  return match?.id || null;\n};\n\nconst tableRows = (rows, entityKey) => rows\n  .map((row) => {\n    const evidenceId = factIdForRow(row);\n    const entity = entityKey === 'page'\n      ? (row.landingPage || row.name || '')\n      : (row.name || [row.source, row.medium].filter(Boolean).join(' / '));\n    if (!entity || !evidenceId) return null;\n    return {\n      [entityKey]: entity,\n      sessions: row.sessions ?? null,\n      engagementRate: row.engagementRate ?? null,\n      conversions: row.conversions ?? null,\n      evidenceIds: [evidenceId]\n    };\n  })\n  .filter(Boolean);\n\nconst deterministicTables = [];\nconst sourceTableRows = tableRows(aiSourceRows, 'source');\nconst landingTableRows = tableRows(aiLandingRows, 'page');\n\nif (sourceTableRows.length) {\n  deterministicTables.push({\n    id: 'ai-referral-sources',\n    title: 'AI referral source summary',\n    columns: [\n      { key: 'source', label: 'Source' },\n      { key: 'sessions', label: 'Sessions' },\n      { key: 'engagementRate', label: 'Engagement rate' },\n      { key: 'conversions', label: 'Conversions' }\n    ],\n    rows: sourceTableRows\n  });\n}\n\nif (landingTableRows.length) {\n  deterministicTables.push({\n    id: 'ai-referral-landing-pages',\n    title: 'AI referral landing pages',\n    columns: [\n      { key: 'page', label: 'Landing page' },\n      { key: 'sessions', label: 'Sessions' },\n      { key: 'engagementRate', label: 'Engagement rate' },\n      { key: 'conversions', label: 'Conversions' }\n    ],\n    rows: landingTableRows\n  });\n}\n\nconst evidenceAvailability = {\n  aiSources: aiSourceRows.length,\n  aiLandingPages: aiLandingRows.length,\n  aiSessions: aiKpis.sessions?.value !== undefined,\n  aiEngagement: aiKpis.engagementRate?.value !== undefined,\n  aiConversions: aiKpis.conversions?.value !== undefined\n};\n\nconst answerableTopics = [];\nif (evidenceAvailability.aiSources > 0) answerableTopics.push('ai_sources');\nif (evidenceAvailability.aiLandingPages > 0) answerableTopics.push('ai_landing_pages');\nif (evidenceAvailability.aiSessions) answerableTopics.push('ai_sessions');\nif (evidenceAvailability.aiEngagement) answerableTopics.push('ai_engagement');\nif (evidenceAvailability.aiConversions) answerableTopics.push('ai_conversions');\n\nconst suggestedQuestionOptions = [];\nconst addSuggestedQuestion = (question) => {\n  if (question && !suggestedQuestionOptions.includes(question)) {\n    suggestedQuestionOptions.push(question);\n  }\n};\n\nif (evidenceAvailability.aiLandingPages > 0 && intent !== 'ai_landing_pages') {\n  addSuggestedQuestion('What are the top landing pages for AI referral traffic?');\n}\nif (evidenceAvailability.aiSources > 0 && intent !== 'ai_sources') {\n  addSuggestedQuestion('Which AI referral sources generated the most sessions?');\n}\nif (evidenceAvailability.aiEngagement) {\n  addSuggestedQuestion('What was the engagement rate for AI referral traffic?');\n}\nif (evidenceAvailability.aiConversions) {\n  addSuggestedQuestion('Did AI referral traffic generate conversions?');\n}\n\nconst promptEvidence = {\n  request: {\n    question: request.question,\n    pageContext: request.pageContext,\n    classification: { domain, intent },\n    dateRange: { from: request.from, to: request.to },\n    project: parent.meta?.projectName || parent.meta?.projectId || request.clientId,\n    conversation: request.conversation.slice(-4)\n  },\n  deterministicFacts: cappedFacts,\n  selectedEvidence: promptSelectedEvidence,\n  dataQuality: compactQuality,\n  evidenceAvailability,\n  answerableTopics,\n  suggestedQuestionOptions\n};\n\nreturn [{\n  json: {\n    ready: true,\n    request,\n    evidenceCache,\n    parentMeta: parent.meta || {},\n    parentPartial: parent.partial === true,\n    evidencePartial,\n    sourcePartial: {\n      ga4: ga4EvidencePartial,\n      gsc: gscEvidencePartial\n    },\n    classification: { domain, intent },\n    deterministicFacts: cappedFacts,\n    deterministicTables,\n    evidenceAvailability,\n    answerableTopics,\n    suggestedQuestionOptions: suggestedQuestionOptions.slice(0, 4),\n    selectedEvidence: selected,\n    limitations,\n    promptEvidence,\n    selectionCounts: {\n      facts: cappedFacts.length,\n      promptCharacters: JSON.stringify(promptEvidence).length,\n      ga4Channels: selected.ga4?.channelLeaders?.length || 0,\n      ga4LandingPages: selected.ga4?.landingPages?.length || 0,\n      ga4Sources: selected.ga4?.sourceMedium?.length || 0,\n      aiSources: sourceTableRows.length,\n      aiLandingPages: landingTableRows.length,\n      gscQueryWinners: selected.gsc?.queryWinners?.length || 0,\n      gscQueryLosers: selected.gsc?.queryLosers?.length || 0,\n      gscPageWinners: selected.gsc?.pageWinners?.length || 0,\n      gscPageLosers: selected.gsc?.pageLosers?.length || 0,\n      gscPageQueries: selected.gsc?.pageQueries?.length || 0\n    }\n  }\n}];\n"
+      },
+      "id": "8f60d5a8-eaf9-4360-ac91-5947e2c1890f",
+      "name": "Prepare Evidence & Facts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6624,
+        928
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c40d6e60-4d84-4232-b3b5-daced62dc242",
+              "leftValue": "={{ $json.ready }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b55ad81-cdf7-4d5e-8584-7f10629e8493",
+      "name": "Evidence Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6864,
+        928
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, code: $json.code || 'ANALYTICS_EVIDENCE_ERROR', error: $json.error || 'Unable to collect analytics evidence.', requestId: $json.requestId, debug: $json.parentResponse } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "ebc71417-e0de-4846-83ea-ba10212c99d4",
+      "name": "Respond Evidence Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        7104,
+        1104
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $input.first().json;\n\nconst systemInstruction = [\n  'You are an SEO and web analytics assistant.',\n  'Answer only from the deterministic facts and selected analytics evidence supplied in the request.',\n  'Do not invent, estimate, or recalculate numbers.',\n  'Do not claim causation when the evidence only shows correlation.',\n  'Use the term AI referral traffic. Do not call it an AI Assistant channel or AI Assistant traffic.',\n  'A previous-period value of zero does not prove that a channel, source, or dataset is new. Say that no sessions were recorded in the comparison period instead.',\n  'When a fact is based on a truncated or partial table, state that limitation clearly.',\n  'When a fact has reliability limited_when_rows_truncated, say that the count or change is within returned rows and do not present it as a complete-site total.',\n  'Use plain business language.',\n  'Prioritize the most important findings, then provide practical recommendations.',\n  'Keep the answer concise: no more than 3 short paragraphs, 4 findings, 4 recommendations, 3 limitations, and 4 suggested questions.',\n  'Every numeric statement in the answer must be supported by fact IDs listed in answerEvidenceIds.',\n  'Every finding must contain one or more valid evidenceIds. Omit a finding when no deterministic fact supports it.',\n  'Every recommendation must contain one or more valid evidenceIds. Do not mention a URL, domain, source, page, or named entity unless it appears in the cited facts.',\n  'Do not calculate a difference from current and previous values. Use only a reported change or delta already present in a deterministic fact.',\n  'Never write phrases such as increased by -5%. Write decreased by 5% instead.',\n  'Recommendations must not introduce new numeric claims or uncited named pages.',\n  'For ai_landing_pages intent, do not say landing-page data is unavailable when evidenceAvailability.aiLandingPages is greater than zero.',\n  'Suggested questions must be selected only from suggestedQuestionOptions. Do not invent additional follow-up questions.',\n  'Do not mention internal workflow names, prompts, JSON, or implementation details.'\n].join(' ');\n\nconst responseSchema = {\n  type: 'OBJECT',\n  properties: {\n    answer: {\n      type: 'STRING',\n      description: 'A direct answer to the user question in no more than three short paragraphs.'\n    },\n    answerEvidenceIds: {\n      type: 'ARRAY',\n      description: 'Fact IDs that support every numeric statement in answer.',\n      items: { type: 'STRING' }\n    },\n    findings: {\n      type: 'ARRAY',\n      maxItems: 4,\n      items: {\n        type: 'OBJECT',\n        properties: {\n          title: { type: 'STRING' },\n          detail: { type: 'STRING' },\n          evidenceIds: {\n            type: 'ARRAY',\n            items: { type: 'STRING' }\n          }\n        },\n        required: ['title', 'detail', 'evidenceIds']\n      }\n    },\n    recommendations: {\n      type: 'ARRAY',\n      maxItems: 4,\n      items: {\n        type: 'OBJECT',\n        properties: {\n          priority: {\n            type: 'STRING',\n            enum: ['high', 'medium', 'low']\n          },\n          action: { type: 'STRING' },\n          rationale: { type: 'STRING' },\n          evidenceIds: {\n            type: 'ARRAY',\n            items: { type: 'STRING' }\n          }\n        },\n        required: ['priority', 'action', 'rationale', 'evidenceIds']\n      }\n    },\n    confidence: {\n      type: 'STRING',\n      enum: ['high', 'medium', 'low']\n    },\n    limitations: {\n      type: 'ARRAY',\n      maxItems: 3,\n      items: { type: 'STRING' }\n    },\n    suggestedQuestions: {\n      type: 'ARRAY',\n      maxItems: 4,\n      items: { type: 'STRING' }\n    }\n  },\n  required: [\n    'answer',\n    'answerEvidenceIds',\n    'findings',\n    'recommendations',\n    'confidence',\n    'limitations',\n    'suggestedQuestions'\n  ]\n};\n\nconst userPrompt = [\n  'Answer the analytics question using the evidence package below.',\n  'Treat deterministicFacts as the only authoritative source for numbers, URLs, domains, source names, and landing pages.',\n  'The selectedEvidence is supporting context only and must not be cited directly.',\n  'List every fact ID used by the main answer in answerEvidenceIds.',\n  'For each finding and recommendation, include at least one valid deterministic fact ID.',\n  'Omit unsupported claims instead of guessing or calculating them.',\n  'Use only the supplied suggestedQuestionOptions for suggestedQuestions.',\n  JSON.stringify(prepared.promptEvidence)\n].join('\\n\\n');\n\nreturn [{\n  json: {\n    ...prepared,\n    geminiRequest: {\n      systemInstruction: {\n        parts: [{ text: systemInstruction }]\n      },\n      contents: [{\n        role: 'user',\n        parts: [{ text: userPrompt }]\n      }],\n      generationConfig: {\n        temperature: 0.2,\n        maxOutputTokens: 4096,\n        thinkingConfig: { thinkingBudget: 0 },\n        responseMimeType: 'application/json',\n        responseSchema\n      }\n    }\n  }\n}];"
+      },
+      "id": "8c9c5a0e-6dbb-44da-8d2c-4687ab2d145c",
+      "name": "Build Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7344,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.geminiRequest) }}",
+        "options": {
+          "timeout": 40000
+        }
+      },
+      "id": "418aa6ed-9fa8-4f0a-af9a-e7f0636d50e9",
+      "name": "Call Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        7584,
+        880
+      ],
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "n72tvODsnmEdgC2H",
+          "name": "Gemini API Key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const apiResponse = $input.first().json || {};\nconst prepared = $('Build Gemini Request').first().json;\nconst request = prepared.request;\n\nconst errorMessage =\n  apiResponse.error?.message ||\n  apiResponse.message ||\n  (apiResponse.error ? JSON.stringify(apiResponse.error) : null);\n\nconst finishReason = apiResponse.candidates?.[0]?.finishReason || null;\n\nconst rawText = (apiResponse.candidates?.[0]?.content?.parts || [])\n  .map((part) => part?.text || '')\n  .join('')\n  .trim();\n\nlet parsed = null;\nlet parseError = null;\n\nif (rawText) {\n  const cleaned = rawText\n    .replace(/^```json\\s*/i, '')\n    .replace(/^```\\s*/i, '')\n    .replace(/\\s*```$/i, '')\n    .trim();\n\n  try {\n    parsed = JSON.parse(cleaned);\n  } catch (error) {\n    parseError = error.message;\n  }\n}\n\nconst valid =\n  parsed &&\n  typeof parsed.answer === 'string' &&\n  Array.isArray(parsed.answerEvidenceIds) &&\n  Array.isArray(parsed.findings) &&\n  Array.isArray(parsed.recommendations) &&\n  typeof parsed.confidence === 'string' &&\n  Array.isArray(parsed.limitations) &&\n  Array.isArray(parsed.suggestedQuestions);\n\nif (!valid) {\n  const fallbackFacts = prepared.deterministicFacts.slice(0, 8);\n  const fallbackAnswer = fallbackFacts.length\n    ? `The analytics evidence was collected successfully, but the language model response could not be validated. Key verified facts: ${fallbackFacts.map((fact) => fact.statement).join(' ')}`\n    : 'The analytics evidence was collected successfully, but the language model response could not be validated.';\n\n  return [{\n    json: {\n      ok: false,\n      status: 502,\n      code: 'GEMINI_RESPONSE_ERROR',\n      error: finishReason === 'MAX_TOKENS'\n        ? 'Gemini reached its output-token limit before completing the JSON response.'\n        : (\n            errorMessage ||\n            parseError ||\n            'Gemini returned an empty or invalid structured response.'\n          ),\n      requestId: request.requestId,\n      question: request.question,\n      classification: prepared.classification,\n      fallbackAnswer,\n      supportingData: fallbackFacts,\n      tables: prepared.deterministicTables || [],\n      limitations: prepared.limitations,\n      debug: request.debug ? {\n        apiResponse,\n        rawText,\n        parseError,\n        selectionCounts: prepared.selectionCounts\n      } : undefined\n    }\n  }];\n}\n\nconst facts = Array.isArray(prepared.deterministicFacts)\n  ? prepared.deterministicFacts\n  : [];\n\nconst factMap = new Map(\n  facts.map((fact) => [String(fact.id), fact])\n);\n\nconst factIds = new Set(factMap.keys());\n\nconst validIds = (values) => [\n  ...new Set(\n    (Array.isArray(values) ? values : [])\n      .map(String)\n      .filter((id) => factIds.has(id))\n  )\n];\n\nconst normalizeWording = (value) => {\n  let text = String(value || '').trim();\n\n  const replacements = [\n    [\n      /\\bincreased by\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'decreased by $1$2'\n    ],\n    [\n      /\\bincreasing by\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'decreasing by $1$2'\n    ],\n    [\n      /\\ban increase of\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'a decrease of $1$2'\n    ],\n    [\n      /\\bdecreased by\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'increased by $1$2'\n    ],\n    [\n      /\\bdecreasing by\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'increasing by $1$2'\n    ],\n    [\n      /\\ba decrease of\\s+[-−]\\s*(\\d[\\d,]*(?:\\.\\d+)?)(\\s*(?:%|percentage points?|pp|positions?|seconds?|sec)?)\\b/gi,\n      'an increase of $1$2'\n    ],\n    [/\\bAI Assistant channel\\b/gi, 'AI referral traffic'],\n    [/\\bAI Assistant traffic\\b/gi, 'AI referral traffic'],\n    [/\\bAI Assistant sessions\\b/gi, 'AI referral sessions'],\n    [/\\bAI traffic\\b/gi, 'AI referral traffic']\n  ];\n\n  for (const [pattern, replacement] of replacements) {\n    text = text.replace(pattern, replacement);\n  }\n\n  return text.replace(/\\s{2,}/g, ' ').trim();\n};\n\nconst numberPattern = /[-−+]?\\d[\\d,]*(?:\\.\\d+)?/g;\n\nconst normalizeNumber = (value) => {\n  const raw = String(value || '')\n    .replace(/,/g, '')\n    .replace(/−/g, '-')\n    .replace(/^\\+/, '');\n\n  const parsedNumber = Number(raw);\n  if (!Number.isFinite(parsedNumber)) return null;\n  return String(Math.abs(parsedNumber));\n};\n\nconst extractNumbers = (value) => {\n  const matches = String(value || '').match(numberPattern) || [];\n  return matches\n    .map(normalizeNumber)\n    .filter(Boolean);\n};\n\nconst collectPrimitiveText = (value, output = []) => {\n  if (value === null || value === undefined) return output;\n\n  if (\n    typeof value === 'string' ||\n    typeof value === 'number' ||\n    typeof value === 'boolean'\n  ) {\n    output.push(String(value));\n    return output;\n  }\n\n  if (Array.isArray(value)) {\n    value.forEach((item) => collectPrimitiveText(item, output));\n    return output;\n  }\n\n  if (typeof value === 'object') {\n    Object.values(value).forEach((item) =>\n      collectPrimitiveText(item, output)\n    );\n  }\n\n  return output;\n};\n\nconst requestNumberSet = new Set(\n  extractNumbers(`${request.from || ''} ${request.to || ''}`)\n);\n\nconst allowedNumberSet = (ids) => {\n  const allowed = new Set(requestNumberSet);\n\n  for (const id of ids) {\n    const fact = factMap.get(id);\n    if (!fact) continue;\n\n    const values = [\n      fact.statement,\n      ...collectPrimitiveText(fact.data)\n    ];\n\n    for (const value of values) {\n      extractNumbers(value).forEach((number) => allowed.add(number));\n    }\n  }\n\n  return allowed;\n};\n\nconst unsupportedNumbers = (text, ids) => {\n  const numbers = extractNumbers(text);\n  if (!numbers.length) return [];\n\n  const allowed = allowedNumberSet(ids);\n  return numbers.filter((number) => !allowed.has(number));\n};\n\nconst normalizeEntity = (value) => String(value || '')\n  .trim()\n  .replace(/[),.;:!?]+$/g, '')\n  .toLowerCase();\n\nconst extractEntities = (value) => {\n  const text = String(value || '');\n  const entities = new Set();\n\n  const fullUrls = text.match(/https?:\\/\\/[^\\s<>()\"']+/gi) || [];\n  for (const rawUrl of fullUrls) {\n    const normalized = normalizeEntity(rawUrl);\n    if (normalized) entities.add(normalized);\n    try {\n      const parsedUrl = new URL(rawUrl.replace(/[),.;:!?]+$/g, ''));\n      if (parsedUrl.hostname) entities.add(parsedUrl.hostname.toLowerCase());\n      if (parsedUrl.pathname && parsedUrl.pathname !== '/') {\n        entities.add(normalizeEntity(parsedUrl.pathname));\n      }\n    } catch {}\n  }\n\n  const domains = text.match(/\\b(?:[a-z0-9-]+\\.)+[a-z]{2,24}\\b/gi) || [];\n  domains.forEach((item) => entities.add(normalizeEntity(item)));\n\n  const pathPattern = /(?:^|[\\s(\"'`])((?:\\/[a-z0-9][a-z0-9/_\\-.?=&%#]*))/gi;\n  let match;\n  while ((match = pathPattern.exec(text)) !== null) {\n    const normalized = normalizeEntity(match[1]);\n    if (normalized && normalized !== '/') entities.add(normalized);\n  }\n\n  return [...entities].filter(Boolean);\n};\n\nconst allowedEntitySet = (ids) => {\n  const allowed = new Set();\n\n  for (const id of ids) {\n    const fact = factMap.get(id);\n    if (!fact) continue;\n\n    const values = [\n      fact.statement,\n      ...collectPrimitiveText(fact.data)\n    ];\n\n    for (const value of values) {\n      extractEntities(value).forEach((entity) => allowed.add(entity));\n    }\n  }\n\n  return allowed;\n};\n\nconst unsupportedEntities = (text, ids) => {\n  const entities = extractEntities(text);\n  if (!entities.length) return [];\n\n  const allowed = allowedEntitySet(ids);\n  return entities.filter((entity) => !allowed.has(entity));\n};\n\nconst aiIntent = ['ai_traffic', 'ai_sources', 'ai_landing_pages']\n  .includes(prepared.classification?.intent);\n\nconst hasUnsupportedNoveltyClaim = (value) => {\n  if (!aiIntent) return false;\n  const text = String(value || '')\n    .toLowerCase()\n    .replace(/\\bnew users?\\b/g, 'users');\n  const novelty = /\\b(new|newly|brand new|first appeared|first-time|first time)\\b/.test(text);\n  const subject = /\\b(ai referral|ai assistant|channel|traffic|dataset|data|source)\\b/.test(text);\n  return novelty && subject;\n};\n\nconst idsSupportTopic = (ids, topic) => ids.some((id) => {\n  const fact = factMap.get(id);\n  if (!fact) return false;\n  const data = fact.data || {};\n  const statement = String(fact.statement || '').toLowerCase();\n\n  if (topic === 'landing') {\n    return Boolean(data.landingPage) ||\n      statement.includes('ai referral landing page');\n  }\n\n  if (topic === 'source') {\n    return Boolean(data.source) || Boolean(data.medium) ||\n      statement.includes('ai referral source');\n  }\n\n  return true;\n});\n\nconst textRequiresTopic = (value, topic) => {\n  const text = String(value || '').toLowerCase();\n  if (topic === 'landing') {\n    return /\\b(landing page|landing pages|url|urls|specific page|specific pages)\\b/.test(text) ||\n      extractEntities(text).some((entity) => entity.startsWith('/'));\n  }\n  if (topic === 'source') {\n    return /\\b(source|sources|referrer|referrers|domain|domains)\\b/.test(text) ||\n      extractEntities(text).some((entity) => !entity.startsWith('/'));\n  }\n  return false;\n};\n\nconst splitSentences = (text) =>\n  String(text || '')\n    .replace(/\\r/g, '')\n    .split(/(?<=[.!?])\\s+|\\n{2,}/)\n    .map((sentence) => sentence.trim())\n    .filter(Boolean);\n\nconst inspectGrounding = (text, ids) => ({\n  unsupportedNumbers: unsupportedNumbers(text, ids),\n  unsupportedEntities: unsupportedEntities(text, ids),\n  unsupportedNovelty: hasUnsupportedNoveltyClaim(text)\n});\n\nconst sanitizeGroundedText = (text, ids) => {\n  const normalized = normalizeWording(text);\n  const sentences = splitSentences(normalized);\n\n  const kept = [];\n  const removed = [];\n\n  for (const sentence of sentences) {\n    const issues = inspectGrounding(sentence, ids);\n    if (\n      issues.unsupportedNumbers.length ||\n      issues.unsupportedEntities.length ||\n      issues.unsupportedNovelty\n    ) {\n      removed.push({ sentence, ...issues });\n    } else {\n      kept.push(sentence);\n    }\n  }\n\n  return {\n    text: kept.join(' ').trim(),\n    removed\n  };\n};\n\nconst groundingIssues = [];\nlet rejectedFindings = 0;\nlet invalidFindingCitations = 0;\nlet unsupportedFindingNumbers = 0;\nlet unsupportedFindingEntities = 0;\nlet unsupportedFindingNovelty = 0;\n\nlet findings = [];\n\nfor (const item of parsed.findings.slice(0, 8)) {\n  const title = normalizeWording(item?.title);\n  const detail = normalizeWording(item?.detail);\n\n  const originalIds = Array.isArray(item?.evidenceIds)\n    ? item.evidenceIds.map(String)\n    : [];\n\n  const evidenceIds = validIds(originalIds);\n\n  if (evidenceIds.length !== originalIds.length) {\n    invalidFindingCitations += 1;\n  }\n\n  if (!title || !detail || evidenceIds.length === 0) {\n    rejectedFindings += 1;\n    groundingIssues.push(\n      title\n        ? `Removed unsupported finding: ${title}`\n        : 'Removed an unsupported finding with no valid evidence IDs.'\n    );\n    continue;\n  }\n\n  const titleIssues = inspectGrounding(title, evidenceIds);\n  const detailIssues = inspectGrounding(detail, evidenceIds);\n  const badNumbers = [\n    ...titleIssues.unsupportedNumbers,\n    ...detailIssues.unsupportedNumbers\n  ];\n  const badEntities = [\n    ...titleIssues.unsupportedEntities,\n    ...detailIssues.unsupportedEntities\n  ];\n  const badNovelty =\n    titleIssues.unsupportedNovelty ||\n    detailIssues.unsupportedNovelty;\n  const combinedFindingText = `${title} ${detail}`;\n  const missingLandingSupport =\n    textRequiresTopic(combinedFindingText, 'landing') &&\n    !idsSupportTopic(evidenceIds, 'landing');\n  const missingSourceSupport =\n    textRequiresTopic(combinedFindingText, 'source') &&\n    !idsSupportTopic(evidenceIds, 'source');\n\n  if (\n    badNumbers.length ||\n    badEntities.length ||\n    badNovelty ||\n    missingLandingSupport ||\n    missingSourceSupport\n  ) {\n    rejectedFindings += 1;\n    unsupportedFindingNumbers += badNumbers.length;\n    unsupportedFindingEntities += badEntities.length;\n    unsupportedFindingNovelty += badNovelty ? 1 : 0;\n\n    const reasons = [];\n    if (badNumbers.length) reasons.push(`numbers: ${[...new Set(badNumbers)].join(', ')}`);\n    if (badEntities.length) reasons.push(`entities: ${[...new Set(badEntities)].join(', ')}`);\n    if (badNovelty) reasons.push('an unsupported new-channel claim');\n    if (missingLandingSupport) reasons.push('missing landing-page evidence');\n    if (missingSourceSupport) reasons.push('missing source evidence');\n\n    groundingIssues.push(\n      `Removed finding \"${title}\" because it contained unsupported ${reasons.join('; ')}.`\n    );\n    continue;\n  }\n\n  findings.push({\n    title,\n    detail,\n    evidenceIds\n  });\n}\n\nconst findingIds = validIds(\n  findings.flatMap((finding) => finding.evidenceIds)\n);\n\nlet answerEvidenceIds = validIds(parsed.answerEvidenceIds);\nif (!answerEvidenceIds.length) {\n  answerEvidenceIds = findingIds;\n}\n\nconst sanitizedAnswer = sanitizeGroundedText(\n  parsed.answer,\n  answerEvidenceIds\n);\n\nlet answer = sanitizedAnswer.text;\n\nif (!answer) {\n  const safeFindingText = findings\n    .slice(0, 3)\n    .map((finding) => finding.detail)\n    .join(' ');\n\n  if (safeFindingText) {\n    answer = safeFindingText;\n  } else {\n    const fallbackFacts = facts.slice(0, 4);\n    answer = fallbackFacts.length\n      ? fallbackFacts.map((fact) => fact.statement).join(' ')\n      : 'The available evidence was not sufficient to produce a fully grounded answer.';\n    answerEvidenceIds = fallbackFacts.map((fact) => fact.id);\n  }\n}\n\nif (sanitizedAnswer.removed.length) {\n  groundingIssues.push(\n    `Removed ${sanitizedAnswer.removed.length} answer sentence(s) containing unsupported claims.`\n  );\n}\n\nconst deterministicTables = Array.isArray(prepared.deterministicTables)\n  ? prepared.deterministicTables\n  : [];\nconst landingTable = deterministicTables.find((table) =>\n  table?.id === 'ai-referral-landing-pages'\n);\nconst sourceTable = deterministicTables.find((table) =>\n  table?.id === 'ai-referral-sources'\n);\nconst landingRows = Array.isArray(landingTable?.rows) ? landingTable.rows : [];\nconst sourceRows = Array.isArray(sourceTable?.rows) ? sourceTable.rows : [];\nconst landingEvidenceIds = validIds(\n  landingRows.flatMap((row) => row?.evidenceIds || [])\n);\nconst sourceEvidenceIds = validIds(\n  sourceRows.flatMap((row) => row?.evidenceIds || [])\n);\nconst unavailablePattern = /\\b(not available|not provided|does not include|cannot determine|unable to identify|unavailable)\\b/i;\nconst answerClaimsUnavailable = unavailablePattern.test(String(parsed.answer || ''));\nconst answerUsesLandingEvidence = answerEvidenceIds.some((id) =>\n  landingEvidenceIds.includes(id)\n);\nconst answerUsesSourceEvidence = answerEvidenceIds.some((id) =>\n  sourceEvidenceIds.includes(id)\n);\n\nconst sessionLabel = (value) => `${value} session${Number(value) === 1 ? '' : 's'}`;\nconst describeRows = (rows, entityKey) => rows.slice(0, 3).map((row) => {\n  const metrics = [];\n  if (row.sessions !== null && row.sessions !== undefined) {\n    metrics.push(sessionLabel(row.sessions));\n  }\n  if (row.engagementRate !== null && row.engagementRate !== undefined) {\n    metrics.push(`${row.engagementRate}% engagement rate`);\n  }\n  if (row.conversions !== null && row.conversions !== undefined) {\n    metrics.push(`${row.conversions} conversions`);\n  }\n  const entity = row?.[entityKey];\n  return metrics.length\n    ? `${entity} (${metrics.join(', ')})`\n    : String(entity || '');\n}).filter(Boolean);\n\nlet deterministicLandingFallback = false;\nlet deterministicSourceFallback = false;\nlet noLandingEvidence = false;\nlet noSourceEvidence = false;\n\nif (prepared.classification?.intent === 'ai_landing_pages') {\n  if (landingRows.length > 0 && (answerClaimsUnavailable || !answerUsesLandingEvidence)) {\n    const describedRows = describeRows(landingRows, 'page');\n    answer = `The leading AI referral landing pages in the returned rows were ${describedRows.join('; ')}.`;\n    answerEvidenceIds = landingEvidenceIds;\n    deterministicLandingFallback = true;\n    groundingIssues.push(\n      'Replaced an unsupported landing-page availability response with deterministic landing-page evidence.'\n    );\n\n    if (!findings.some((finding) =>\n      finding.evidenceIds.some((id) => landingEvidenceIds.includes(id))\n    )) {\n      findings = [{\n        title: 'Top AI referral landing pages',\n        detail: answer,\n        evidenceIds: landingEvidenceIds\n      }, ...findings].slice(0, 4);\n    }\n  }\n\n  if (landingRows.length === 0) {\n    const absenceFact = facts.find((fact) =>\n      fact?.data?.dataset === 'aiLandingPages' &&\n      Number(fact?.data?.availableRows) === 0\n    );\n    answer = absenceFact?.statement ||\n      'No AI referral landing-page rows were available in the cached GA4 evidence for the selected period.';\n    answerEvidenceIds = absenceFact ? [absenceFact.id] : [];\n    findings = [];\n    noLandingEvidence = true;\n  }\n}\n\nif (prepared.classification?.intent === 'ai_sources') {\n  if (sourceRows.length > 0 && (answerClaimsUnavailable || !answerUsesSourceEvidence)) {\n    const describedRows = describeRows(sourceRows, 'source');\n    answer = `The leading AI referral sources in the returned rows were ${describedRows.join('; ')}.`;\n    answerEvidenceIds = sourceEvidenceIds;\n    deterministicSourceFallback = true;\n    groundingIssues.push(\n      'Replaced an unsupported source availability response with deterministic AI referral source evidence.'\n    );\n\n    if (!findings.some((finding) =>\n      finding.evidenceIds.some((id) => sourceEvidenceIds.includes(id))\n    )) {\n      findings = [{\n        title: 'Top AI referral sources',\n        detail: answer,\n        evidenceIds: sourceEvidenceIds\n      }, ...findings].slice(0, 4);\n    }\n  }\n\n  if (sourceRows.length === 0) {\n    const absenceFact = facts.find((fact) =>\n      fact?.data?.dataset === 'aiSources' &&\n      Number(fact?.data?.availableRows) === 0\n    );\n    answer = absenceFact?.statement ||\n      'No AI referral source rows were available in the cached GA4 evidence for the selected period.';\n    answerEvidenceIds = absenceFact ? [absenceFact.id] : [];\n    findings = [];\n    noSourceEvidence = true;\n  }\n}\n\nconst findingIdsAfterFallback = validIds(\n  findings.flatMap((finding) => finding.evidenceIds)\n);\n\nlet rejectedRecommendations = 0;\nlet invalidRecommendationCitations = 0;\nlet removedRecommendationSentences = 0;\nlet unsupportedRecommendationEntities = 0;\nlet unsupportedRecommendationNovelty = 0;\nconst recommendations = [];\n\nfor (const item of parsed.recommendations.slice(0, 8)) {\n  if (noLandingEvidence || noSourceEvidence) break;\n\n  const originalIds = Array.isArray(item?.evidenceIds)\n    ? item.evidenceIds.map(String)\n    : [];\n  const evidenceIds = validIds(originalIds);\n\n  if (evidenceIds.length !== originalIds.length) {\n    invalidRecommendationCitations += 1;\n  }\n\n  if (!evidenceIds.length) {\n    rejectedRecommendations += 1;\n    groundingIssues.push('Removed a recommendation with no valid evidence IDs.');\n    continue;\n  }\n\n  const recommendationText = `${item?.action || ''} ${item?.rationale || ''}`;\n  const missingLandingSupport =\n    textRequiresTopic(recommendationText, 'landing') &&\n    !idsSupportTopic(evidenceIds, 'landing');\n  const missingSourceSupport =\n    textRequiresTopic(recommendationText, 'source') &&\n    !idsSupportTopic(evidenceIds, 'source');\n\n  if (missingLandingSupport || missingSourceSupport) {\n    rejectedRecommendations += 1;\n    groundingIssues.push(\n      `Removed a recommendation with ${missingLandingSupport ? 'no landing-page evidence' : 'no source evidence'}.`\n    );\n    continue;\n  }\n\n  const actionResult = sanitizeGroundedText(item?.action, evidenceIds);\n  const rationaleResult = sanitizeGroundedText(item?.rationale, evidenceIds);\n\n  removedRecommendationSentences +=\n    actionResult.removed.length +\n    rationaleResult.removed.length;\n\n  for (const removed of [...actionResult.removed, ...rationaleResult.removed]) {\n    unsupportedRecommendationEntities += removed.unsupportedEntities?.length || 0;\n    unsupportedRecommendationNovelty += removed.unsupportedNovelty ? 1 : 0;\n  }\n\n  const action = actionResult.text;\n  const rationale = rationaleResult.text ||\n    'This action follows from the verified findings and supporting evidence.';\n\n  if (!action) {\n    rejectedRecommendations += 1;\n    continue;\n  }\n\n  recommendations.push({\n    priority: ['high', 'medium', 'low'].includes(item?.priority)\n      ? item.priority\n      : 'medium',\n    action,\n    rationale,\n    evidenceIds\n  });\n}\n\nif (removedRecommendationSentences) {\n  groundingIssues.push(\n    `Removed ${removedRecommendationSentences} recommendation sentence(s) containing unsupported claims.`\n  );\n}\n\nconst limitationMatchesDomain = (value) => {\n  const text = String(value || '').toLowerCase();\n  const domain = prepared.classification?.domain || 'combined';\n\n  if (hasUnsupportedNoveltyClaim(text)) return false;\n\n  if (domain === 'gsc') {\n    const ga4OnlyTerms = [\n      'ga4',\n      'google analytics',\n      'session medium',\n      'ai-assistant session',\n      'ai referral session',\n      'engagement rate',\n      'source/medium rows',\n      'channel rows'\n    ];\n\n    if (ga4OnlyTerms.some((term) => text.includes(term))) {\n      return false;\n    }\n  }\n\n  if (domain === 'ga4') {\n    const gscOnlyTerms = [\n      'search console',\n      'gsc ',\n      'query rows',\n      'page-query',\n      'anonymized',\n      'keyword counts',\n      'average search position'\n    ];\n\n    if (gscOnlyTerms.some((term) => text.includes(term))) {\n      return false;\n    }\n  }\n\n  return true;\n};\n\nconst modelLimitations = parsed.limitations\n  .map(String)\n  .map(normalizeWording)\n  .filter(Boolean)\n  .filter(limitationMatchesDomain)\n  .slice(0, 4);\n\nconst limitations = [...new Set([\n  ...prepared.limitations,\n  ...modelLimitations\n])].slice(0, 8);\n\nconst recommendationIds = validIds(\n  recommendations.flatMap((item) => item.evidenceIds)\n);\nconst allAcceptedIds = validIds([\n  ...answerEvidenceIds,\n  ...findingIdsAfterFallback,\n  ...recommendationIds\n]);\nconst citedIds = new Set(allAcceptedIds);\n\nconst supportingData = facts\n  .filter((fact) => citedIds.has(String(fact.id)))\n  .slice(0, 24);\n\nconst hasLimitedCitedEvidence = supportingData.some((fact) =>\n  fact.reliability && fact.reliability !== 'high'\n);\n\nconst evidencePartial =\n  prepared.evidencePartial === true ||\n  hasLimitedCitedEvidence;\n\nconst groundingAdjusted =\n  rejectedFindings > 0 ||\n  invalidFindingCitations > 0 ||\n  unsupportedFindingNumbers > 0 ||\n  unsupportedFindingEntities > 0 ||\n  unsupportedFindingNovelty > 0 ||\n  sanitizedAnswer.removed.length > 0 ||\n  rejectedRecommendations > 0 ||\n  invalidRecommendationCitations > 0 ||\n  removedRecommendationSentences > 0 ||\n  deterministicLandingFallback ||\n  deterministicSourceFallback;\n\nconst groundingPassed =\n  answer.length > 0 &&\n  answerEvidenceIds.length > 0 &&\n  findings.every((finding) => finding.evidenceIds.length > 0) &&\n  recommendations.every((item) => item.evidenceIds.length > 0);\n\nconst modelConfidence = ['high', 'medium', 'low'].includes(\n  parsed.confidence\n)\n  ? parsed.confidence\n  : 'medium';\n\nlet confidence = modelConfidence;\nconst confidenceReasons = [];\n\nif (prepared.evidencePartial === true) {\n  confidenceReasons.push('Relevant analytics evidence is partial.');\n}\n\nif (hasLimitedCitedEvidence) {\n  confidenceReasons.push(\n    'One or more cited facts are based on truncated returned rows.'\n  );\n}\n\nif (groundingAdjusted) {\n  confidenceReasons.push(\n    'The grounding guard removed or corrected unsupported model content.'\n  );\n}\n\nif (noLandingEvidence || noSourceEvidence) {\n  confidence = 'low';\n  confidenceReasons.push(\n    noLandingEvidence\n      ? 'No AI referral landing-page rows were available.'\n      : 'No AI referral source rows were available.'\n  );\n} else if (confidence === 'high' && (evidencePartial || groundingAdjusted)) {\n  confidence = 'medium';\n}\n\nif (!groundingPassed || (findings.length === 0 && groundingAdjusted && !noLandingEvidence && !noSourceEvidence)) {\n  confidence = 'low';\n}\n\nconst deterministicSuggestions = Array.isArray(prepared.suggestedQuestionOptions)\n  ? prepared.suggestedQuestionOptions\n      .map(String)\n      .map(normalizeWording)\n      .filter(Boolean)\n  : [];\n\nconst modelSuggestions = parsed.suggestedQuestions\n  .map(String)\n  .map(normalizeWording)\n  .filter(Boolean);\n\nconst suggestedQuestions = aiIntent\n  ? deterministicSuggestions.slice(0, 4)\n  : modelSuggestions.slice(0, 6);\n\nlet tables = deterministicTables;\nif (prepared.classification?.intent === 'ai_landing_pages') {\n  tables = landingTable ? [landingTable] : [];\n} else if (prepared.classification?.intent === 'ai_sources') {\n  tables = sourceTable ? [sourceTable] : [];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    requestId: request.requestId,\n    question: request.question,\n    classification: prepared.classification,\n    answer,\n    answerEvidenceIds,\n    findings,\n    recommendations,\n    supportingData,\n    tables,\n    evidenceAvailability: prepared.evidenceAvailability || null,\n    confidence,\n    limitations,\n    suggestedQuestions,\n    grounding: {\n      passed: groundingPassed,\n      adjusted: groundingAdjusted,\n      rejectedFindings,\n      invalidFindingCitations,\n      unsupportedFindingNumbers,\n      unsupportedFindingEntities,\n      unsupportedFindingNovelty,\n      rejectedRecommendations,\n      invalidRecommendationCitations,\n      unsupportedRecommendationEntities,\n      unsupportedRecommendationNovelty,\n      removedAnswerSentences: sanitizedAnswer.removed.length,\n      removedRecommendationSentences,\n      deterministicLandingFallback,\n      deterministicSourceFallback,\n      issues: groundingIssues.slice(0, 12)\n    },\n    meta: {\n      clientId: request.clientId,\n      projectId: prepared.parentMeta.projectId || request.clientId,\n      projectName: prepared.parentMeta.projectName || null,\n      from: request.from,\n      to: request.to,\n      partial: prepared.evidencePartial === true,\n      overallParentPartial: prepared.parentPartial === true,\n      evidenceCache: prepared.evidenceCache || null,\n      modelVersion: apiResponse.modelVersion || null,\n      generatedAt: new Date().toISOString()\n    },\n    debug: request.debug ? {\n      selectionCounts: prepared.selectionCounts,\n      usageMetadata: apiResponse.usageMetadata || null,\n      finishReason,\n      modelConfidence,\n      confidenceAdjusted: confidence !== modelConfidence,\n      confidenceReasons,\n      sourcePartial: prepared.sourcePartial || null,\n      evidenceCache: prepared.evidenceCache || null,\n      evidenceAvailability: prepared.evidenceAvailability || null,\n      answerableTopics: prepared.answerableTopics || [],\n      grounding: {\n        groundingPassed,\n        groundingAdjusted,\n        rejectedFindings,\n        invalidFindingCitations,\n        unsupportedFindingNumbers,\n        unsupportedFindingEntities,\n        unsupportedFindingNovelty,\n        rejectedRecommendations,\n        invalidRecommendationCitations,\n        unsupportedRecommendationEntities,\n        unsupportedRecommendationNovelty,\n        removedAnswerSentences: sanitizedAnswer.removed.length,\n        removedRecommendationSentences,\n        deterministicLandingFallback,\n        deterministicSourceFallback,\n        rawAnswerEvidenceIds: parsed.answerEvidenceIds,\n        acceptedAnswerEvidenceIds: answerEvidenceIds\n      }\n    } : undefined\n  }\n}];\n"
+      },
+      "id": "7f2758f5-764f-456e-825b-0df9676fbd99",
+      "name": "Validate Gemini Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7824,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7d4bd61b-0de4-4888-8579-39b02f58328a",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2f46bc34-6ccd-411e-a4fc-05b819696bb2",
+      "name": "AI Response Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8064,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "078f51e9-d4f6-4cc7-9e19-9f3b852ec6f7",
+      "name": "Respond AI Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        8544,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Phase 5.2 Resilience\n\n* AI source, landing-page, and AI traffic questions use deterministic cached evidence and skip Gemini.\n* Other questions may use Gemini. If Gemini fails or returns 503, deterministic evidence is returned with HTTP 200.\n* Only one active workflow should own `/webhook/seo-report-ai-assistant`.\n* Keep the Gemini credential assigned for interpretive questions.",
+        "height": 300,
+        "width": 430,
+        "color": 5
+      },
+      "id": "3e33ba8e-1c06-4999-8c27-02e42832bc4b",
+      "name": "Setup Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4896,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Request body\n\n```json\n{\n  \"clientId\": \"repute\",\n  \"from\": \"2026-05-01\",\n  \"to\": \"2026-05-31\",\n  \"question\": \"What are the top landing pages for AI referral traffic?\",\n  \"pageContext\": \"ai\",\n  \"conversation\": [],\n  \"cacheEnabled\": true,\n  \"forceRefresh\": false,\n  \"debug\": true\n}\n```\n\nInspect `classification`, `grounding`, `answerEvidenceIds`, `recommendations[].evidenceIds`, `tables`, and `evidenceAvailability` in the response.",
+        "height": 340,
+        "width": 480,
+        "color": 7
+      },
+      "id": "bd49186a-ca29-43e4-8b9d-8d580d117c42",
+      "name": "API Contract Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5408,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "82111061-0cab-418a-8ab5-214edfe51116",
+              "leftValue": "={{ $json.directCacheAllowed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "733abec8-b4c5-4f52-9f6f-5258f9d4ded6",
+      "name": "Direct Cache Allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5632,
+        928
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $input.first().json;\n\nreturn [{\n  json: {\n    requestId: request.requestId,\n    cacheRequest: request.cacheRequest\n  }\n}];"
+      },
+      "id": "159d3a30-be51-4864-a9cf-4decab68c149",
+      "name": "Build AI Cache Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5872,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://balsgowtham-n8n.hf.space/webhook/seo-report-snapshot-cache",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.cacheRequest) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "82048a70-12ad-4926-84f0-3eb2f8207fc5",
+      "name": "Get Cached AI Evidence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        6112,
+        800
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "32126b91-d3a3-4d13-8609-69f9776ddcb6",
+              "leftValue": "={{ $json.ok === true && $json.hit === true && !!$json.payload?.analyticsEvidence }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6420eb76-ff89-457f-b94b-684e1d34ec51",
+      "name": "Cached AI Evidence Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6352,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dba5c35f-88b5-4034-a775-4cbab2a73110",
+              "leftValue": "={{ ['ai_sources', 'ai_landing_pages', 'ai_traffic'].includes($json.classification && $json.classification.intent) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8e446dbd-e980-446f-a1fa-049527eaa160",
+      "name": "Use Deterministic AI Route?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7344,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prepared = $input.first().json || {};\nconst request = prepared.request || $('Validate & Normalize Request').first().json;\nconst facts = Array.isArray(prepared.deterministicFacts)\n  ? prepared.deterministicFacts\n  : [];\nconst tables = Array.isArray(prepared.deterministicTables)\n  ? prepared.deterministicTables\n  : [];\nconst intent = prepared.classification?.intent || 'ai_traffic';\nconst projectName =\n  prepared.parentMeta?.projectName ||\n  prepared.parentMeta?.projectId ||\n  request.clientId;\n\nconst factById = new Map(facts.map((fact) => [String(fact.id), fact]));\nconst metricFact = (metric) => facts.find((fact) => fact?.data?.metric === metric) || null;\nconst sourceTable = tables.find((table) => table.id === 'ai-referral-sources') || null;\nconst landingTable = tables.find((table) => table.id === 'ai-referral-landing-pages') || null;\nconst sourceRows = Array.isArray(sourceTable?.rows) ? sourceTable.rows : [];\nconst landingRows = Array.isArray(landingTable?.rows) ? landingTable.rows : [];\n\nconst sessionFact = metricFact('sessions');\nconst userFact = metricFact('users');\nconst engagementFact = metricFact('engagementRate');\nconst conversionFact = metricFact('conversions');\nconst totalSessions = Number(sessionFact?.data?.value ?? 0) || 0;\nconst totalUsers = Number(userFact?.data?.value ?? 0) || 0;\nconst engagementRate = Number(engagementFact?.data?.value ?? 0) || 0;\nconst conversions = Number(conversionFact?.data?.value ?? 0) || 0;\n\nconst formatSource = (value) => String(value || '')\n  .replace(/\\s*\\/\\s*ai-assistant$/i, '')\n  .replace(/^chatgpt\\.com$/i, 'ChatGPT')\n  .replace(/^gemini\\.google\\.com$/i, 'Gemini')\n  .replace(/^perplexity\\.ai$/i, 'Perplexity');\n\nconst plural = (value, singular, pluralValue = `${singular}s`) =>\n  `${value} ${Number(value) === 1 ? singular : pluralValue}`;\n\nconst uniqueIds = (ids) => [...new Set(\n  (ids || []).map(String).filter((id) => factById.has(id))\n)];\n\nconst finding = (title, detail, evidenceIds) => ({\n  title,\n  detail,\n  evidenceIds: uniqueIds(evidenceIds)\n});\n\nconst recommendation = (priority, title, detail, evidenceIds) => ({\n  priority,\n  title,\n  detail,\n  evidenceIds: uniqueIds(evidenceIds)\n});\n\nlet answer = '';\nlet answerEvidenceIds = [];\nlet findings = [];\nlet recommendations = [];\nlet responseTables = [];\n\nif (intent === 'ai_sources') {\n  const topRows = sourceRows.slice(0, 5);\n  if (topRows.length) {\n    const sourceSummary = topRows\n      .map((row) => `${formatSource(row.source)} (${plural(row.sessions || 0, 'session')})`)\n      .join(', ');\n    const leader = topRows[0];\n    const leaderShare = totalSessions > 0\n      ? Math.round(((Number(leader.sessions) || 0) / totalSessions) * 100)\n      : 0;\n\n    answer = `AI referral traffic to ${projectName} came from ${sourceSummary}. ` +\n      `${formatSource(leader.source)} was the largest source with ${plural(leader.sessions || 0, 'session')}` +\n      `${leaderShare ? `, about ${leaderShare}% of the ${totalSessions} AI referral sessions` : ''}. ` +\n      `Overall AI referral engagement was ${engagementRate}%, with ${conversions} conversions recorded.`;\n\n    answerEvidenceIds = uniqueIds([\n      sessionFact?.id,\n      engagementFact?.id,\n      conversionFact?.id,\n      ...topRows.flatMap((row) => row.evidenceIds || [])\n    ]);\n\n    findings.push(finding(\n      `${formatSource(leader.source)} led AI referrals`,\n      `${formatSource(leader.source)} generated ${plural(leader.sessions || 0, 'session')} and had a ${Number(leader.engagementRate) || 0}% engagement rate.`,\n      leader.evidenceIds\n    ));\n\n    if (topRows.length > 1) {\n      findings.push(finding(\n        'Other AI referral sources contributed smaller volumes',\n        topRows.slice(1).map((row) =>\n          `${formatSource(row.source)} generated ${plural(row.sessions || 0, 'session')}`\n        ).join(', ') + '.',\n        topRows.slice(1).flatMap((row) => row.evidenceIds || [])\n      ));\n    }\n\n    findings.push(finding(\n      'AI referral engagement and conversions',\n      `AI referral traffic recorded a ${engagementRate}% engagement rate and ${conversions} conversions.`,\n      [engagementFact?.id, conversionFact?.id]\n    ));\n\n    recommendations.push(recommendation(\n      'medium',\n      'Review the experience for the largest AI referral source',\n      `Review the pages and journeys used by visitors from ${formatSource(leader.source)}. Keep conclusions cautious because the total sample is ${totalSessions} sessions.`,\n      [sessionFact?.id, ...(leader.evidenceIds || [])]\n    ));\n\n    const zeroEngagementRows = topRows.filter((row) => Number(row.engagementRate) === 0 && Number(row.sessions) > 0);\n    if (zeroEngagementRows.length) {\n      recommendations.push(recommendation(\n        'medium',\n        'Investigate low-engagement AI referrals',\n        `${zeroEngagementRows.map((row) => formatSource(row.source)).join(', ')} recorded sessions but no engaged sessions in this period.`,\n        zeroEngagementRows.flatMap((row) => row.evidenceIds || [])\n      ));\n    }\n\n    responseTables = [sourceTable];\n  } else {\n    answer = `No source-level AI referral rows were available for ${projectName} in the selected period.`;\n    answerEvidenceIds = uniqueIds([sessionFact?.id]);\n  }\n} else if (intent === 'ai_landing_pages') {\n  const actualRows = landingRows.filter((row) => row.page && row.page !== '(not set)');\n  const unresolvedRows = landingRows.filter((row) => row.page === '(not set)');\n  const topRows = actualRows.slice(0, 5);\n\n  if (topRows.length) {\n    const pageSummary = topRows\n      .map((row) => `${row.page} (${plural(row.sessions || 0, 'session')})`)\n      .join(', ');\n    answer = `The top identified landing pages for AI referral traffic to ${projectName} were ${pageSummary}.`;\n    if (unresolvedRows.length) {\n      const unresolved = unresolvedRows[0];\n      answer += ` GA4 also recorded ${plural(unresolved.sessions || 0, 'session')} with the landing page shown as “(not set)”.`;\n    }\n\n    answerEvidenceIds = uniqueIds([\n      ...topRows.flatMap((row) => row.evidenceIds || []),\n      ...unresolvedRows.flatMap((row) => row.evidenceIds || [])\n    ]);\n\n    findings.push(finding(\n      'Homepage received the most identified AI referral sessions',\n      `${topRows[0].page} received ${plural(topRows[0].sessions || 0, 'session')} with a ${Number(topRows[0].engagementRate) || 0}% engagement rate.`,\n      topRows[0].evidenceIds\n    ));\n\n    const highEngagement = topRows\n      .filter((row) => Number(row.engagementRate) >= 50)\n      .slice(0, 3);\n    if (highEngagement.length) {\n      findings.push(finding(\n        'Some AI referral landing pages showed strong observed engagement',\n        highEngagement.map((row) =>\n          `${row.page} had a ${Number(row.engagementRate) || 0}% engagement rate from ${plural(row.sessions || 0, 'session')}`\n        ).join('; ') + '. The volumes are small, so this is directional rather than conclusive.',\n        highEngagement.flatMap((row) => row.evidenceIds || [])\n      ));\n    }\n\n    if (unresolvedRows.length) {\n      const unresolved = unresolvedRows[0];\n      findings.push(finding(\n        'Some AI referral landing pages were unresolved',\n        `${plural(unresolved.sessions || 0, 'session')} were attributed to “(not set)”, which limits page-level interpretation.`,\n        unresolved.evidenceIds\n      ));\n      recommendations.push(recommendation(\n        'high',\n        'Investigate “(not set)” landing-page attribution',\n        'Check GA4 session-start and landing-page tracking so more AI referral sessions can be tied to a real page.',\n        unresolved.evidenceIds\n      ));\n    }\n\n    recommendations.push(recommendation(\n      'medium',\n      'Review the highest-volume AI referral landing pages',\n      'Check whether the page content, internal links, and calls to action match the intent of visitors arriving through AI referrals.',\n      topRows.slice(0, 3).flatMap((row) => row.evidenceIds || [])\n    ));\n\n    responseTables = [landingTable];\n  } else {\n    answer = `No landing-page-level AI referral rows were available for ${projectName} in the selected period.`;\n    answerEvidenceIds = uniqueIds([sessionFact?.id]);\n  }\n} else {\n  answer = `${projectName} recorded ${plural(totalSessions, 'AI referral session')} from ${plural(totalUsers, 'user')} in the selected period. ` +\n    `The engagement rate was ${engagementRate}% and ${conversions} conversions were recorded.`;\n\n  answerEvidenceIds = uniqueIds([\n    sessionFact?.id,\n    userFact?.id,\n    engagementFact?.id,\n    conversionFact?.id\n  ]);\n\n  findings.push(finding(\n    'AI referral traffic volume',\n    `${projectName} recorded ${plural(totalSessions, 'AI referral session')} from ${plural(totalUsers, 'user')}.`,\n    [sessionFact?.id, userFact?.id]\n  ));\n  findings.push(finding(\n    'AI referral engagement',\n    `AI referral traffic had a ${engagementRate}% engagement rate.`,\n    [engagementFact?.id]\n  ));\n  findings.push(finding(\n    'AI referral conversions',\n    `${conversions} conversions were recorded from AI referral traffic.`,\n    [conversionFact?.id]\n  ));\n\n  recommendations.push(recommendation(\n    'medium',\n    'Monitor AI referral traffic as the sample grows',\n    'Track source, landing-page, engagement, and conversion changes over future periods before drawing strong conclusions.',\n    [sessionFact?.id, engagementFact?.id, conversionFact?.id]\n  ));\n\n  responseTables = sourceTable ? [sourceTable] : [];\n}\n\nanswerEvidenceIds = uniqueIds(answerEvidenceIds);\nfindings = findings.filter((item) => item.evidenceIds.length > 0);\nrecommendations = recommendations.filter((item) => item.evidenceIds.length > 0);\n\nconst citedIds = uniqueIds([\n  ...answerEvidenceIds,\n  ...findings.flatMap((item) => item.evidenceIds),\n  ...recommendations.flatMap((item) => item.evidenceIds)\n]);\nconst supportingData = facts.filter((fact) => citedIds.includes(String(fact.id)));\n\nconst limitations = [...new Set([\n  ...(Array.isArray(prepared.limitations) ? prepared.limitations : []),\n  ...(totalSessions > 0 && totalSessions < 30\n    ? [`The AI referral sample is small at ${totalSessions} sessions, so source and engagement patterns are directional.`]\n    : []),\n  ...(Number(sessionFact?.data?.prev ?? 0) === 0\n    ? ['No AI referral sessions were recorded in the comparison period, so a normal period-over-period percentage is not meaningful.']\n    : [])\n])].slice(0, 6);\n\nlet confidence = totalSessions > 0 && totalSessions < 30 ? 'medium' : 'high';\nif (!supportingData.length) confidence = 'low';\n\nreturn [{\n  json: {\n    ok: true,\n    requestId: request.requestId,\n    question: request.question,\n    classification: prepared.classification,\n    answer,\n    answerEvidenceIds,\n    findings,\n    recommendations,\n    supportingData,\n    tables: responseTables.filter(Boolean),\n    evidenceAvailability: prepared.evidenceAvailability || null,\n    confidence,\n    limitations,\n    suggestedQuestions: Array.isArray(prepared.suggestedQuestionOptions)\n      ? prepared.suggestedQuestionOptions.slice(0, 4)\n      : [],\n    grounding: {\n      passed: supportingData.length > 0,\n      adjusted: false,\n      deterministicRoute: true,\n      modelBypassed: true,\n      issues: []\n    },\n    meta: {\n      clientId: request.clientId,\n      projectId: prepared.parentMeta?.projectId || request.clientId,\n      projectName: prepared.parentMeta?.projectName || null,\n      from: request.from,\n      to: request.to,\n      partial: prepared.evidencePartial === true,\n      overallParentPartial: prepared.parentPartial === true,\n      evidenceCache: prepared.evidenceCache || null,\n      responseMode: 'deterministic_evidence',\n      modelVersion: null,\n      generatedAt: new Date().toISOString()\n    },\n    debug: request.debug ? {\n      selectionCounts: prepared.selectionCounts || null,\n      sourcePartial: prepared.sourcePartial || null,\n      evidenceAvailability: prepared.evidenceAvailability || null,\n      answerableTopics: prepared.answerableTopics || [],\n      deterministicRoute: true,\n      intent\n    } : undefined\n  }\n}];"
+      },
+      "id": "3fcfafce-2c09-4ad0-a384-1817aff96754",
+      "name": "Build Deterministic AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7584,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const failure = $input.first().json || {};\nconst prepared = $('Prepare Evidence & Facts').first().json || {};\nconst request = prepared.request || $('Validate & Normalize Request').first().json;\nconst allFacts = Array.isArray(prepared.deterministicFacts)\n  ? prepared.deterministicFacts\n  : [];\n\nconst suppliedFacts = Array.isArray(failure.supportingData)\n  ? failure.supportingData\n  : [];\nconst supportingData = suppliedFacts.length\n  ? suppliedFacts\n  : allFacts.slice(0, 10);\nconst evidenceIds = supportingData.map((fact) => String(fact.id)).filter(Boolean);\nconst firstFacts = supportingData.slice(0, 4);\n\nconst answer = String(\n  failure.fallbackAnswer ||\n  (firstFacts.length\n    ? `The language model was temporarily unavailable, but the cached analytics evidence is available. Verified facts: ${firstFacts.map((fact) => fact.statement).join(' ')}`\n    : 'The language model was temporarily unavailable and no deterministic facts were available for this question.')\n).trim();\n\nconst findings = firstFacts.map((fact) => ({\n  title: fact.source || 'Verified analytics fact',\n  detail: fact.statement,\n  evidenceIds: [String(fact.id)]\n}));\n\nconst limitations = [...new Set([\n  ...(Array.isArray(failure.limitations) ? failure.limitations : []),\n  'The language model was temporarily unavailable, so this response contains deterministic cached evidence without model interpretation.'\n])].slice(0, 6);\n\nreturn [{\n  json: {\n    ok: true,\n    requestId: request.requestId,\n    question: request.question,\n    classification: failure.classification || prepared.classification,\n    answer,\n    answerEvidenceIds: evidenceIds,\n    findings,\n    recommendations: [],\n    supportingData,\n    tables: Array.isArray(failure.tables)\n      ? failure.tables\n      : (Array.isArray(prepared.deterministicTables) ? prepared.deterministicTables : []),\n    evidenceAvailability: prepared.evidenceAvailability || null,\n    confidence: supportingData.length ? 'medium' : 'low',\n    limitations,\n    suggestedQuestions: Array.isArray(prepared.suggestedQuestionOptions)\n      ? prepared.suggestedQuestionOptions.slice(0, 4)\n      : [],\n    grounding: {\n      passed: supportingData.length > 0,\n      adjusted: true,\n      deterministicRoute: false,\n      modelFallback: true,\n      issues: ['The model request failed, so deterministic cached evidence was returned.']\n    },\n    meta: {\n      clientId: request.clientId,\n      projectId: prepared.parentMeta?.projectId || request.clientId,\n      projectName: prepared.parentMeta?.projectName || null,\n      from: request.from,\n      to: request.to,\n      partial: prepared.evidencePartial === true,\n      overallParentPartial: prepared.parentPartial === true,\n      evidenceCache: prepared.evidenceCache || null,\n      responseMode: 'deterministic_model_fallback',\n      modelVersion: null,\n      generatedAt: new Date().toISOString()\n    },\n    debug: request.debug ? {\n      modelError: failure.error || null,\n      originalCode: failure.code || null,\n      apiResponse: failure.debug?.apiResponse || null,\n      selectionCounts: prepared.selectionCounts || null,\n      evidenceAvailability: prepared.evidenceAvailability || null,\n      modelFallback: true\n    } : undefined\n  }\n}];"
+      },
+      "id": "e33b1478-dbc3-419f-8247-353689de65c2",
+      "name": "Build Model Failure Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8304,
+        1008
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Assistant Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate & Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Request Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Valid?": {
+      "main": [
+        [
+          {
+            "node": "Direct Cache Allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Direct Cache Allowed?": {
+      "main": [
+        [
+          {
+            "node": "Build AI Cache Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Parent AI Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Cache Request": {
+      "main": [
+        [
+          {
+            "node": "Get Cached AI Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Cached AI Evidence": {
+      "main": [
+        [
+          {
+            "node": "Cached AI Evidence Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cached AI Evidence Ready?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Evidence & Facts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Parent AI Evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Parent AI Evidence": {
+      "main": [
+        [
+          {
+            "node": "Prepare Evidence & Facts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Evidence & Facts": {
+      "main": [
+        [
+          {
+            "node": "Evidence Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evidence Ready?": {
+      "main": [
+        [
+          {
+            "node": "Use Deterministic AI Route?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Evidence Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Gemini Request": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini": {
+      "main": [
+        [
+          {
+            "node": "Validate Gemini Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Gemini Response": {
+      "main": [
+        [
+          {
+            "node": "AI Response Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Response Valid?": {
+      "main": [
+        [
+          {
+            "node": "Respond AI Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Model Failure Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Use Deterministic AI Route?": {
+      "main": [
+        [
+          {
+            "node": "Build Deterministic AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Gemini Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Deterministic AI Response": {
+      "main": [
+        [
+          {
+            "node": "Respond AI Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Model Failure Fallback": {
+      "main": [
+        [
+          {
+            "node": "Respond AI Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "033bab14-2bb5-45ae-882f-cec9916bd87f",
+  "meta": {},
+  "nodeGroups": [],
+  "tags": []
+}
