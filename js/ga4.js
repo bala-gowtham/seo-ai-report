@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-//  GA4 Lite Tab — Mock Data + Renderers
+//  GA4 Analytics View and Preview Renderers
 //  Uses same chart color tokens and CSS classes as main UI
 // ═══════════════════════════════════════════════════════════
 
-// ── Mock data for UI preview ──────────────────────────────
+// ── Demo data for UI preview ──────────────────────────────
 const GA4_LITE_DEMO = {
   kpis: {
     sessions:       { value: 24820, prev: 21340, change: 16.3,  suffix: '',  changeSuffix: '%' },
@@ -49,69 +49,130 @@ const GA4_LITE_DEMO = {
   ]
 };
 
+function getGa4DemoReport(filters = {}) {
+  return {
+    ...GA4_LITE_DEMO,
+    _demoGa4: true,
+    partial: false,
+    meta: {
+      projectId: 'demo',
+      projectName: 'Demo Data',
+      from: filters.from,
+      to: filters.to,
+      dateRangeLabel: formatDateRangeLabel(filters.from, filters.to),
+      comparisonMode: 'previous_calendar_month',
+      sourceLabel: 'Google Analytics 4'
+    },
+    dataQuality: { partial: false, truncatedReports: [] }
+  };
+}
+
+function setActivePanel(view) {
+  const navOverview = document.getElementById('navOverview');
+  const navGa4 = document.getElementById('navGa4');
+  const panelMain = document.getElementById('dashboardContent');
+  const panelGa4 = document.getElementById('ga4TabContent');
+  const footer = document.getElementById('reportFooter');
+  const insight = document.getElementById('insightBanner');
+  const error = document.getElementById('errorState');
+  const title = document.querySelector('.page-title');
+  const isGa4 = view === 'ga4';
+
+  SeoDashboardState.setActiveView(isGa4 ? 'ga4' : 'overview');
+  navOverview?.classList.toggle('active', !isGa4);
+  navGa4?.classList.toggle('active', isGa4);
+  navOverview?.setAttribute('aria-current', isGa4 ? 'false' : 'page');
+  navGa4?.setAttribute('aria-current', isGa4 ? 'page' : 'false');
+
+  if (panelMain) panelMain.style.display = isGa4 ? 'none' : '';
+  if (panelGa4) panelGa4.style.display = isGa4 ? 'block' : 'none';
+  if (footer) footer.style.display = isGa4 ? 'none' : '';
+  if (title) title.textContent = isGa4 ? 'GA4 Analytics' : 'SEO Overview';
+  if (error) error.style.display = 'none';
+
+  if (insight) {
+    if (isGa4) insight.style.display = 'none';
+    else if (currentReport) renderInsightBanner(currentReport);
+  }
+}
+
 // ── Tab switching ─────────────────────────────────────────
 function initGa4Tab() {
   const navOverview = document.getElementById('navOverview');
-  const navGa4      = document.getElementById('navGa4');
-  const panelMain   = document.getElementById('dashboardContent');
-  const panelGa4    = document.getElementById('ga4TabContent');
-  const footerEl    = document.getElementById('reportFooter');
-  const insightEl   = document.getElementById('insightBanner');
+  const navGa4 = document.getElementById('navGa4');
+  if (!navGa4 || !document.getElementById('ga4TabContent')) return;
 
-  if (!navGa4 || !panelGa4) return;
+  const openGa4 = () => {
+    setActivePanel('ga4');
+    loadReportView('ga4').catch(() => {});
+  };
 
-  navGa4.addEventListener('click', () => {
-    navOverview && navOverview.classList.remove('active');
-    navGa4.classList.add('active');
-    panelMain.style.display   = 'none';
-    if (footerEl) footerEl.style.display  = 'none';
-    if (insightEl) insightEl.style.display = 'none';
-    panelGa4.style.display    = 'block';
-    const report = (typeof currentReport !== 'undefined' && currentReport)
-      ? currentReport
-      : (typeof getDemoData === 'function' ? getDemoData(typeof getCurrentFilters === 'function' ? getCurrentFilters() : {}) : {});
-    renderGa4Tab(report);
-    const dateEl = document.getElementById('ga4FooterDate');
-    if (dateEl) {
-      dateEl.textContent = 'Generated on ' + new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
-    }
-  });
+  const openOverview = () => {
+    setActivePanel('overview');
+    const filters = getCurrentFilters();
+    const report = SeoDashboardState.getReport('overview', filters) || currentReport;
+    if (report) renderDashboard(report);
+    else loadReportView('overview').catch(() => {});
+  };
 
-  navOverview && navOverview.addEventListener('click', () => {
-    navGa4.classList.remove('active');
-    navOverview.classList.add('active');
-    panelMain.style.display   = '';
-    if (footerEl) footerEl.style.display  = '';
-    panelGa4.style.display    = 'none';
-  });
+  navGa4.addEventListener('click', openGa4);
+  navOverview?.addEventListener('click', openOverview);
+  activateOnKeyboard(navGa4, openGa4);
+  activateOnKeyboard(navOverview, openOverview);
 }
 
 // ── Main render ───────────────────────────────────────────
 function renderGa4Tab(report) {
   const d = buildGa4LiteData(report);
+  renderGa4Meta(report);
   renderGa4KpiStrip(d.kpis);
   renderGa4ChannelTable(d.trafficByChannel);
   renderGa4SourceMediumTable(d.sourceMedium);
   renderGa4LandingTable(d.topLandingPages);
   renderGa4DeviceChart(d.deviceSplit);
-  renderGa4Warnings(d.warnings);
+
+  const warnings = [...(d.warnings || [])];
+  const truncated = d.dataQuality?.truncatedReports || [];
+  if (d.partial && !warnings.some(item => /truncat|limited|partial/i.test(item))) {
+    warnings.unshift('Some GA4 tables are partial because the configured row limits were reached.');
+  }
+  if (truncated.length) {
+    warnings.push(`Limited tables: ${truncated.map(item => `${item.report} ${item.period}`).join(', ')}.`);
+  }
+  renderGa4Warnings(warnings);
+
+  const dateEl = document.getElementById('ga4FooterDate');
+  if (dateEl) {
+    dateEl.textContent = 'Generated on ' + new Date().toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+  }
+}
+
+function renderGa4Meta(report) {
+  const meta = report?.meta || {};
+  const subtitle = document.getElementById('reportSubtitle');
+  const label = meta.dateRangeLabel || formatDateRangeLabel(meta.from, meta.to);
+  if (subtitle) {
+    subtitle.textContent = `${meta.projectName || 'Selected project'} · ${label} · Google Analytics 4`;
+  }
+  syncExportControls(report);
 }
 
 // ── Merge live + demo ────────────────────────────────────
 function buildGa4LiteData(report) {
   const live = report || {};
-  const liveKpis = live.kpis || {};
+  if (live._demoGa4) return live;
 
+  const liveKpis = live.kpis || {};
   const hasLiveGa4 =
     Object.prototype.hasOwnProperty.call(liveKpis, 'sessions') ||
-    Array.isArray(live.trafficByChannel) ||
-    Array.isArray(live.sourceMedium) ||
-    Array.isArray(live.topLandingPages) ||
-    Array.isArray(live.deviceSplit);
+    Object.prototype.hasOwnProperty.call(live, 'trafficByChannel') ||
+    Object.prototype.hasOwnProperty.call(live, 'sourceMedium') ||
+    Object.prototype.hasOwnProperty.call(live, 'topLandingPages') ||
+    Object.prototype.hasOwnProperty.call(live, 'deviceSplit');
 
-  if (!hasLiveGa4) {
-    return GA4_LITE_DEMO;
-  }
+  if (!hasLiveGa4) return getGa4DemoReport(getCurrentFilters());
 
   return {
     kpis: {
@@ -121,32 +182,36 @@ function buildGa4LiteData(report) {
       conversions: liveKpis.conversions || { value: 0, prev: 0, change: 0, suffix: '', changeSuffix: '%' }
     },
     trafficByChannel: Array.isArray(live.trafficByChannel) ? enrichChannels(live.trafficByChannel) : [],
-    sourceMedium: Array.isArray(live.sourceMedium) ? live.sourceMedium : [],
+    sourceMedium: Array.isArray(live.sourceMedium) ? enrichChannels(live.sourceMedium) : [],
     topLandingPages: Array.isArray(live.topLandingPages) ? enrichLanding(live.topLandingPages) : [],
-    deviceSplit: Array.isArray(live.deviceSplit) ? live.deviceSplit : [],
-    warnings: Array.isArray(live.ga4Warnings) ? live.ga4Warnings : []
+    deviceSplit: Array.isArray(live.deviceSplit) ? enrichChannels(live.deviceSplit) : [],
+    warnings: Array.isArray(live.ga4Warnings) ? live.ga4Warnings : (Array.isArray(live.warnings) ? live.warnings : []),
+    partial: live.partial === true || live.dataQuality?.partial === true,
+    dataQuality: live.dataQuality || { partial: live.partial === true }
   };
 }
 
 function enrichChannels(arr) {
-  return arr.map(r => ({
-    name:           r.name,
-    value:          r.value || 0,
-    prev:           r.prev  || 0,
-    change:         r.change != null ? r.change : 0,
-    engagementRate: r.engagementRate != null ? r.engagementRate : null,
-    conversions:    r.conversions    != null ? r.conversions    : null
+  return arr.map(row => ({
+    ...row,
+    name: row.name || row.source || row.medium || 'Unknown',
+    value: Number(row.value ?? row.sessions ?? 0),
+    prev: Number(row.prev ?? row.prevSessions ?? 0),
+    change: Number(row.change ?? row.sessionsChange ?? 0),
+    engagementRate: row.engagementRate != null ? Number(row.engagementRate) : null,
+    conversions: row.conversions != null ? Number(row.conversions) : null
   }));
 }
 
 function enrichLanding(arr) {
-  return arr.map(r => ({
-    name:           r.name,
-    value:          r.value || 0,
-    prev:           r.prev  || 0,
-    change:         r.change != null ? r.change : 0,
-    engagementRate: r.engagementRate != null ? r.engagementRate : null,
-    conversions:    r.conversions    != null ? r.conversions    : null
+  return arr.map(row => ({
+    ...row,
+    name: row.name || row.landingPage || '/',
+    value: Number(row.value ?? row.sessions ?? 0),
+    prev: Number(row.prev ?? row.prevSessions ?? 0),
+    change: Number(row.change ?? row.sessionsChange ?? 0),
+    engagementRate: row.engagementRate != null ? Number(row.engagementRate) : null,
+    conversions: row.conversions != null ? Number(row.conversions) : null
   }));
 }
 

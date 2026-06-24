@@ -1,92 +1,127 @@
 async function exportPDF() {
   const target = document.getElementById('pdf-content');
-  const btn    = document.getElementById('exportBtn');
+  const btn = document.getElementById('exportBtn');
 
   if (!target) { alert('Dashboard content was not found.'); return; }
   if (!window.html2canvas) { alert('Export failed: html2canvas is not loaded.'); return; }
 
-  const JsPDFClass = window.jspdf && window.jspdf.jsPDF;
+  const JsPDFClass = window.jspdf?.jsPDF;
   if (!JsPDFClass) { alert('Export failed: jsPDF is not loaded.'); return; }
 
   const oldScrollX = window.scrollX;
   const oldScrollY = window.scrollY;
+  const activeView = window.SeoDashboardState?.activeView || 'overview';
+  const activeReport = activeView === 'ga4' ? currentGa4Report : currentReport;
+  const hiddenEls = [];
 
   btn.disabled = true;
   document.documentElement.classList.add('dashboard-exporting-html');
   document.body.classList.add('dashboard-exporting');
 
-  // Hide UI-only elements from capture
-  const hideSelectors = ['#loadingState', '#errorState', '#exportBtn', '.nav-export-btn', '#navExport'];
-  const hiddenEls = [];
-  hideSelectors.forEach(sel => {
-    document.querySelectorAll(sel).forEach(el => {
-      if (el.style.display !== 'none') {
-        el.dataset.pdfHide = '1';
-        el.style.display = 'none';
-        hiddenEls.push(el);
+  const hideSelectors = [
+    '#loadingState', '#errorState', '#exportBtn', '#refreshReportBtn',
+    '.nav-export-btn', '#navExport', '#snapshotStatusPill',
+    '.mobile-nav-toggle', '.sidebar-backdrop', '.ai-chat-launch', '.ai-chat-panel'
+  ];
+
+  hideSelectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(element => {
+      if (element.style.display !== 'none') {
+        element.dataset.pdfDisplay = element.style.display;
+        element.style.display = 'none';
+        hiddenEls.push(element);
       }
     });
   });
 
-  syncExportControls();
+  syncExportControls(activeReport || undefined);
   window.scrollTo(0, 0);
 
   try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    await new Promise(r => requestAnimationFrame(r));
-    await new Promise(r => requestAnimationFrame(r));
+    if (document.fonts?.ready) await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(resolve));
     resizeCharts();
-    await new Promise(r => setTimeout(r, 900));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Capture at 1200px width — matches the dashboard's design width
-    const CAPTURE_W = 1200;
-    const CAPTURE_H = target.scrollHeight;
-
+    const captureWidth = 1200;
+    const captureHeight = target.scrollHeight;
     const canvas = await html2canvas(target, {
       scale: 2,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       backgroundColor: '#f0f2f5',
       logging: false,
       scrollX: 0,
       scrollY: 0,
-      width:        CAPTURE_W,
-      height:       CAPTURE_H,
-      windowWidth:  CAPTURE_W,
-      windowHeight: CAPTURE_H
+      width: captureWidth,
+      height: captureHeight,
+      windowWidth: captureWidth,
+      windowHeight: captureHeight
     });
 
-    // PDF page = same aspect ratio as captured canvas
-    // Keep width fixed at 210mm, derive height from actual content ratio
-    const PDF_W = 210; // mm
-    const PDF_H = Math.ceil((canvas.height / canvas.width) * PDF_W);
-
+    const pageWidthMm = 210;
+    const pageHeightMm = 297;
+    const marginMm = 6;
+    const imageWidthMm = pageWidthMm - (marginMm * 2);
+    const imageHeightMm = pageHeightMm - (marginMm * 2);
+    const sliceHeightPx = Math.floor(canvas.width * (imageHeightMm / imageWidthMm));
     const pdf = new JsPDFClass({
-      orientation: PDF_H > PDF_W ? 'portrait' : 'landscape',
+      orientation: 'portrait',
       unit: 'mm',
-      format: [PDF_W, PDF_H],
+      format: 'a4',
       compress: true
     });
 
-    pdf.setFillColor(240, 242, 245);
-    pdf.rect(0, 0, PDF_W, PDF_H, 'F');
+    let offsetY = 0;
+    let pageIndex = 0;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    pdf.addImage(imgData, 'JPEG', 0, 0, PDF_W, PDF_H);
+    while (offsetY < canvas.height) {
+      const pageSliceHeight = Math.min(sliceHeightPx, canvas.height - offsetY);
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = pageSliceHeight;
 
-    const filters   = getCurrentFilters();
-    const projectId = filters.projectId || 'report';
-    const now       = new Date();
-    const safeMonth = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
-    pdf.save(`SEO_Overview_${projectId}_${safeMonth}.pdf`);
+      const context = pageCanvas.getContext('2d');
+      context.fillStyle = '#f0f2f5';
+      context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      context.drawImage(
+        canvas,
+        0, offsetY, canvas.width, pageSliceHeight,
+        0, 0, canvas.width, pageSliceHeight
+      );
 
-  } catch (err) {
-    console.error(err);
-    alert('Export failed: ' + (err && err.message ? err.message : 'unknown error'));
+      if (pageIndex > 0) pdf.addPage('a4', 'portrait');
+
+      const renderedHeightMm = (pageSliceHeight / canvas.width) * imageWidthMm;
+      const imageData = pageCanvas.toDataURL('image/jpeg', 0.92);
+      pdf.addImage(
+        imageData,
+        'JPEG',
+        marginMm,
+        marginMm,
+        imageWidthMm,
+        renderedHeightMm,
+        undefined,
+        'FAST'
+      );
+
+      offsetY += pageSliceHeight;
+      pageIndex += 1;
+    }
+
+    const filters = getCurrentFilters();
+    const safeProject = String(filters.projectId || 'report').replace(/[^a-z0-9_-]+/gi, '_');
+    const safeFrom = String(filters.from || '').replace(/-/g, '');
+    const safeTo = String(filters.to || '').replace(/-/g, '');
+    const viewLabel = activeView === 'ga4' ? 'GA4' : 'Overview';
+    pdf.save(`SEO_${viewLabel}_${safeProject}_${safeFrom}_${safeTo}.pdf`);
+  } catch (error) {
+    console.error(error);
+    alert(`Export failed: ${error?.message || 'unknown error'}`);
   } finally {
-    hiddenEls.forEach(el => {
-      el.style.display = '';
-      delete el.dataset.pdfHide;
+    hiddenEls.forEach(element => {
+      element.style.display = element.dataset.pdfDisplay || '';
+      delete element.dataset.pdfDisplay;
     });
     document.body.classList.remove('dashboard-exporting');
     document.documentElement.classList.remove('dashboard-exporting-html');
@@ -96,6 +131,6 @@ async function exportPDF() {
   }
 }
 
-document.addEventListener('click', function (event) {
+document.addEventListener('click', event => {
   if (event.target.closest('#exportBtn')) exportPDF();
 });

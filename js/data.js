@@ -1,12 +1,60 @@
 const REPORT_CONFIG = {
-  n8nWebhookUrl:    'https://balsgowtham-n8n.hf.space/webhook/seo-report-orchestrator',
-  clientsWebhookUrl: 'https://balsgowtham-n8n.hf.space/webhook/seo-report-clients',
   useDemoFallback: false
 };
 
+const SeoDashboardState = {
+  activeView: 'overview',
+  filterKey: '',
+  filters: null,
+  reports: { overview: null, ga4: null },
+  builds: new Map(),
+
+  makeFilterKey(params = {}) {
+    return [params.projectId || params.clientId || '', params.from || '', params.to || ''].join('|');
+  },
+
+  setFilters(params = {}) {
+    const nextKey = this.makeFilterKey(params);
+    if (nextKey !== this.filterKey) {
+      this.filterKey = nextKey;
+      this.reports = { overview: null, ga4: null };
+    }
+    this.filters = { ...params };
+    return nextKey;
+  },
+
+  setReport(view, report, params = this.filters || {}) {
+    this.setFilters(params);
+    this.reports[view] = report;
+    return report;
+  },
+
+  getReport(view, params = this.filters || {}) {
+    return this.makeFilterKey(params) === this.filterKey
+      ? this.reports[view] || null
+      : null;
+  },
+
+  setActiveView(view) {
+    this.activeView = view === 'ga4' ? 'ga4' : 'overview';
+  },
+
+  clearReports() {
+    this.reports = { overview: null, ga4: null };
+  }
+};
+
+window.SeoDashboardState = SeoDashboardState;
+
+function emitSnapshotState(state, detail = {}) {
+  window.dispatchEvent(new CustomEvent('seo:snapshot-state', {
+    detail: { state, ...detail }
+  }));
+}
+
 /*
   ============================================================
-  N8N RESPONSE CONTRACT
+  REPORT VIEW CONTRACT
   ============================================================
 
   kpis[key]:
@@ -42,13 +90,9 @@ const REPORT_CONFIG = {
     'previous_equal_length_period' — custom date range;
                                 comparison is the immediately preceding equal-length period
 
-  CLIENTS WEBHOOK CONTRACT (GET /webhook/seo-report-clients):
+  CLIENTS API CONTRACT:
     Response: { ok: true, count: N, clients: [ { clientId, clientName, siteUrl } ] }
-
-  CORS headers required from n8n:
-    Access-Control-Allow-Origin: *
-    Access-Control-Allow-Headers: Content-Type
-    Access-Control-Allow-Methods: POST, OPTIONS
+    Browser requests are routed through the Netlify API layer.
   ============================================================
 */
 
@@ -153,40 +197,164 @@ const DEMO_REPORT_DATA = {
   warnings: []
 };
 
+function getNetlifyApi() {
+  const api = window.NetlifySeoApi;
+  if (!api) throw new Error('The Netlify API client was not loaded.');
+  return api;
+}
+
 async function fetchClientList() {
-  const res = await fetch(REPORT_CONFIG.clientsWebhookUrl, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
-  });
-  if (!res.ok) throw new Error(`Clients webhook returned ${res.status}`);
-  const data = await res.json();
-  if (!data.ok || !Array.isArray(data.clients)) throw new Error('Invalid clients response');
+  const data = await getNetlifyApi().listClients();
+  if (!data?.ok || !Array.isArray(data.clients)) {
+    throw new Error(data?.error || 'Invalid clients response.');
+  }
   return data.clients;
 }
 
-async function fetchReportData(params) {
-  try {
-    const response = await fetch(REPORT_CONFIG.n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        'client-id': params.projectId,
-        from:        params.from,
-        to:          params.to
-      })
+async function waitForSnapshot(api, input) {
+  const buildKey = [input.clientId, input.from, input.to].join('|');
+  let buildPromise = SeoDashboardState.builds.get(buildKey);
+
+  if (!buildPromise) {
+    buildPromise = (async () => {
+      await api.refreshReport(input);
+      return api.waitForReport(
+        { ...input, view: 'overview' },
+        {
+          timeoutMs: 6 * 60 * 1000,
+          onProgress(progress) {
+            emitSnapshotState('building', {
+              message: 'Preparing analytics snapshot…',
+              attempt: progress.attempt,
+              elapsedMs: progress.elapsedMs
+            });
+          }
+        }
+      );
+    })().finally(() => {
+      SeoDashboardState.builds.delete(buildKey);
     });
 
-    if (!response.ok) throw new Error(`n8n returned ${response.status}`);
+    SeoDashboardState.builds.set(buildKey, buildPromise);
+  }
 
-    const liveData = await response.json();
-    return normalizeReportData(liveData, params);
-  } catch (error) {
-    console.warn('Report fetch failed, using demo data:', error);
-    if (REPORT_CONFIG.useDemoFallback) {
-      return getDemoData(params);
+  const overview = await buildPromise;
+  if (input.view === 'overview') return overview;
+
+  return api.waitForReport(input, {
+    timeoutMs: 90 * 1000,
+    onProgress(progress) {
+      emitSnapshotState('building', {
+        message: `Loading the ${input.view.toUpperCase()} cached view…`,
+        attempt: progress.attempt,
+        elapsedMs: progress.elapsedMs
+      });
     }
+  });
+}
+
+async function fetchReportData(params) {
+  const view = params.view === 'ga4' ? 'ga4' : 'overview';
+  const input = {
+    clientId: params.projectId,
+    from: params.from,
+    to: params.to,
+    view
+  };
+
+  try {
+    const api = getNetlifyApi();
+    let response = await api.getReport(input);
+    let payload = response.payload;
+
+    if (response.status === 202 || payload?.pending === true) {
+      emitSnapshotState('building', {
+        message: 'No cached snapshot yet. Collecting GA4 and GSC…'
+      });
+      payload = await waitForSnapshot(api, input);
+    }
+
+    const report = normalizeReportView(payload, params, view);
+    const cache = report.meta?.cache || {};
+    const messages = [];
+
+    if (cache.stale) messages.push('Loaded a stale cached snapshot.');
+    else if (cache.hit) messages.push('Loaded cached analytics.');
+    else messages.push('Analytics snapshot ready.');
+
+    if (report.partial || cache.partial) {
+      messages.push('Some tables are limited by configured row coverage.');
+    }
+
+    emitSnapshotState(cache.stale ? 'warning' : 'ready', {
+      message: messages.join(' '),
+      cache,
+      partial: report.partial === true
+    });
+
+    return SeoDashboardState.setReport(view, report, params);
+  } catch (error) {
+    console.warn('Report fetch failed:', error);
+    emitSnapshotState('error', {
+      message: error.message || 'The report could not be loaded.',
+      code: error.code || 'REPORT_LOAD_ERROR'
+    });
+
+    if (REPORT_CONFIG.useDemoFallback) return getDemoData(params);
     throw error;
   }
+}
+
+function normalizeReportView(report, params = {}, view = 'overview') {
+  return view === 'ga4'
+    ? normalizeGa4ReportData(report, params)
+    : normalizeReportData(report, params);
+}
+
+function normalizeGa4ReportData(report, params = {}) {
+  const incoming = report || {};
+  const payload = incoming.ga4 && typeof incoming.ga4 === 'object'
+    ? incoming.ga4
+    : incoming;
+
+  const meta = {
+    ...(payload.meta || {}),
+    ...(incoming.meta || {})
+  };
+
+  if (params.from) meta.from = params.from;
+  if (params.to) meta.to = params.to;
+
+  meta.projectId = meta.projectId || meta.clientId || params.projectId || '';
+  meta.projectName = meta.projectName || meta.clientName || params.projectName || meta.projectId || 'Selected project';
+  meta.comparisonMode = meta.comparisonMode || 'previous_equal_length_period';
+  meta.dateRangeLabel = formatDateRangeLabel(meta.from, meta.to);
+  meta.monthLabel = meta.dateRangeLabel;
+  meta.sourceLabel = 'Google Analytics 4';
+
+  return {
+    ...payload,
+    ok: incoming.ok !== false,
+    view: 'ga4',
+    partial: incoming.partial === true || payload.partial === true || payload.dataQuality?.partial === true,
+    meta,
+    kpis: { ...(payload.kpis || {}), ...(incoming.kpis || {}) },
+    sessionsOverTime: normalizeSessionsOverTime(payload.sessionsOverTime, meta.comparisonMode),
+    deviceSplit: safeArray(payload.deviceSplit),
+    trafficByChannel: safeArray(payload.trafficByChannel),
+    topLandingPages: safeArray(payload.topLandingPages),
+    sourceMedium: safeArray(payload.sourceMedium),
+    countries: safeArray(payload.countries),
+    aeoSources: safeArray(payload.aeoSources),
+    aeoLandingPages: safeArray(payload.aeoLandingPages),
+    ga4Warnings: safeArray(incoming.ga4Warnings).length
+      ? safeArray(incoming.ga4Warnings)
+      : safeArray(payload.warnings || payload.ga4Warnings),
+    warnings: safeArray(incoming.warnings).length
+      ? safeArray(incoming.warnings)
+      : safeArray(payload.warnings || payload.ga4Warnings),
+    dataQuality: payload.dataQuality || { partial: incoming.partial === true }
+  };
 }
 
 function getDemoData(params) {
@@ -207,7 +375,7 @@ function normalizeReportData(report, params = {}) {
   if (params.to) meta.to = params.to;
 
   meta.projectId = incoming.meta?.projectId || params.projectId || 'local-seo-client';
-  meta.projectName = incoming.meta?.projectName || (params.projectId === 'demo' ? 'Demo Data' : 'Local SEO Client');
+  meta.projectName = incoming.meta?.projectName || params.projectName || (params.projectId === 'demo' ? 'Demo Data' : params.projectId || 'Selected project');
   meta.comparisonMode = incoming.meta?.comparisonMode || 'previous_equal_length_period';
 
   if (incoming.meta?.prevFrom) meta.prevFrom = incoming.meta.prevFrom;
