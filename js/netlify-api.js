@@ -24,7 +24,6 @@
 
     const raw = await response.text();
     let payload = null;
-
     if (raw.trim()) {
       try {
         payload = JSON.parse(raw);
@@ -35,7 +34,9 @@
 
     if (!response.ok && response.status !== 202) {
       throw new SeoApiError(
-        payload?.error || payload?.message || `Request failed (${response.status}).`,
+        payload?.error ||
+          payload?.message ||
+          `Request failed (${response.status}).`,
         {
           status: response.status,
           code: payload?.code,
@@ -66,28 +67,24 @@
   }
 
   async function getReport(input) {
-    const result = await request("/.netlify/functions/report", {
+    return request("/.netlify/functions/report", {
       method: "POST",
       body: {
         ...cleanInput(input),
         view: input.view || "overview",
       },
     });
-
-    return result;
   }
 
   async function refreshReport(input) {
-    const result = await request("/.netlify/functions/refresh-report", {
+    return request("/.netlify/functions/refresh-report", {
       method: "POST",
       body: cleanInput(input),
     });
-
-    return result;
   }
 
   async function askAi(input) {
-    const result = await request("/api/ai-chat", {
+    return request("/.netlify/functions/ai-chat", {
       method: "POST",
       body: {
         ...cleanInput(input),
@@ -99,8 +96,6 @@
         debug: input.debug === true,
       },
     });
-
-    return result;
   }
 
   function sleep(ms) {
@@ -114,7 +109,6 @@
 
     while (Date.now() - startedAt < timeoutMs) {
       attempt += 1;
-
       const result = await getReport(input);
 
       if (result.status === 200 && result.payload?.ok === true) {
