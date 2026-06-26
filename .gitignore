@@ -1,6 +1,11 @@
 # Local Netlify folder
 .netlify
 
+# Environment and secret files
+.env
+.env.*
+!.env.example
+
 # Local API and diagnostic test files
 /ai-*.json
 /ai-*.txt
