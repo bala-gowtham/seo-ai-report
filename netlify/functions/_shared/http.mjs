@@ -1,11 +1,9 @@
-const DEFAULT_N8N_BASE_URL = "https://balsgowtham-n8n.hf.space";
 export const CACHE_SCHEMA_VERSION =
   process.env.SEO_CACHE_SCHEMA || "parent-v5-compact-gsc1";
 
 export function createRequestId(prefix = "netlify") {
   const random =
-    globalThis.crypto?.randomUUID?.() ||
-    Math.random().toString(36).slice(2, 12);
+    globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 12);
   return `${prefix}_${Date.now().toString(36)}_${random}`;
 }
 
@@ -44,7 +42,6 @@ export function errorResponse({
 
 export async function parseJsonBody(request, maxBytes = 64_000) {
   const raw = await request.text();
-
   if (raw.length > maxBytes) {
     const error = new Error("Request body is too large.");
     error.code = "BODY_TOO_LARGE";
@@ -78,7 +75,6 @@ export function booleanValue(value, fallback = false) {
 
 export function validateDateRange(from, to, maxDays = 366) {
   const pattern = /^\d{4}-\d{2}-\d{2}$/;
-
   const parse = (value) => {
     if (!pattern.test(value)) return null;
     const date = new Date(`${value}T00:00:00Z`);
@@ -122,9 +118,13 @@ export function validateDateRange(from, to, maxDays = 366) {
 export function n8nUrl(pathOrUrl) {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
 
-  const base = (
-    process.env.N8N_BASE_URL || DEFAULT_N8N_BASE_URL
-  ).replace(/\/+$/, "");
+  const base = stringValue(process.env.N8N_BASE_URL, 500).replace(/\/+$/, "");
+  if (!base) {
+    const error = new Error("N8N_BASE_URL is not configured in Netlify.");
+    error.code = "N8N_BASE_URL_MISSING";
+    error.status = 500;
+    throw error;
+  }
 
   const path = String(pathOrUrl || "").startsWith("/")
     ? pathOrUrl
@@ -134,25 +134,35 @@ export function n8nUrl(pathOrUrl) {
 }
 
 export function n8nHeaders(requestId, additional = {}) {
-  const secret = process.env.N8N_PROXY_SECRET;
+  const sharedSecret = stringValue(
+    process.env.SEO_REPORT_SHARED_SECRET,
+    2_000,
+  );
+
+  if (!sharedSecret) {
+    const error = new Error(
+      "SEO_REPORT_SHARED_SECRET is not configured in Netlify.",
+    );
+    error.code = "N8N_SHARED_SECRET_MISSING";
+    error.status = 500;
+    throw error;
+  }
+
+  const legacySecret = stringValue(process.env.N8N_PROXY_SECRET, 2_000);
 
   return {
     "content-type": "application/json",
     accept: "application/json",
     "x-request-id": requestId,
-    ...(secret ? { "x-seo-proxy-secret": secret } : {}),
     ...additional,
+    "x-seo-report-secret": sharedSecret,
+    ...(legacySecret ? { "x-seo-proxy-secret": legacySecret } : {}),
   };
 }
 
 export async function fetchJson(
   url,
-  {
-    method = "POST",
-    headers = {},
-    body,
-    timeoutMs = 50_000,
-  } = {},
+  { method = "POST", headers = {}, body, timeoutMs = 50_000 } = {},
 ) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -172,7 +182,6 @@ export async function fetchJson(
 
     const raw = await response.text();
     let payload = null;
-
     if (raw.trim()) {
       try {
         payload = JSON.parse(raw);
@@ -194,7 +203,6 @@ export async function fetchJson(
       timeoutError.status = 504;
       throw timeoutError;
     }
-
     throw error;
   } finally {
     clearTimeout(timeout);
