@@ -1,24 +1,15 @@
-const CONTEXTS = new Set([
-  "auto",
-  "overview",
-  "ga4",
-  "gsc",
-  "ai"
-]);
+const CONTEXTS = new Set(["auto", "overview", "ga4", "gsc", "ai"]);
 
 function jsonResponse(payload, status = 200, extraHeaders = {}) {
-  return new Response(
-    JSON.stringify(payload),
-    {
-      status,
-      headers: {
-        "content-type": "application/json; charset=utf-8",
-        "cache-control": "no-store",
-        "x-content-type-options": "nosniff",
-        ...extraHeaders
-      }
-    }
-  );
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+      ...extraHeaders,
+    },
+  });
 }
 
 function createRequestId() {
@@ -26,21 +17,14 @@ function createRequestId() {
 }
 
 function stringValue(value, maxLength) {
-  return String(value ?? "")
-    .trim()
-    .slice(0, maxLength);
+  return String(value ?? "").trim().slice(0, maxLength);
 }
 
 function isValidDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
-
   return (
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === value
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
   );
 }
 
@@ -54,19 +38,17 @@ export default async function handler(request) {
         code: "METHOD_NOT_ALLOWED",
         error: "Use POST for this endpoint.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      405
+      405,
     );
   }
 
   const origin = request.headers.get("origin");
-
   if (origin) {
     try {
       const requestOrigin = new URL(request.url).origin;
       const suppliedOrigin = new URL(origin).origin;
-
       if (requestOrigin !== suppliedOrigin) {
         return jsonResponse(
           {
@@ -74,9 +56,9 @@ export default async function handler(request) {
             code: "ORIGIN_NOT_ALLOWED",
             error: "Cross-origin requests are not allowed.",
             requestId,
-            retryable: false
+            retryable: false,
           },
-          403
+          403,
         );
       }
     } catch {
@@ -86,32 +68,28 @@ export default async function handler(request) {
           code: "INVALID_ORIGIN",
           error: "The request origin is invalid.",
           requestId,
-          retryable: false
+          retryable: false,
         },
-        403
+        403,
       );
     }
   }
 
-  const contentLength = Number(
-    request.headers.get("content-length") || 0
-  );
-
-  if (contentLength > 80000) {
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 80_000) {
     return jsonResponse(
       {
         ok: false,
         code: "REQUEST_TOO_LARGE",
         error: "The request body is too large.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      413
+      413,
     );
   }
 
   let rawBody;
-
   try {
     rawBody = await request.text();
   } catch {
@@ -121,27 +99,26 @@ export default async function handler(request) {
         code: "INVALID_BODY",
         error: "The request body could not be read.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      400
+      400,
     );
   }
 
-  if (new TextEncoder().encode(rawBody).length > 80000) {
+  if (new TextEncoder().encode(rawBody).length > 80_000) {
     return jsonResponse(
       {
         ok: false,
         code: "REQUEST_TOO_LARGE",
         error: "The request body is too large.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      413
+      413,
     );
   }
 
   let body;
-
   try {
     body = JSON.parse(rawBody);
   } catch {
@@ -151,33 +128,24 @@ export default async function handler(request) {
         code: "INVALID_JSON",
         error: "Request body must contain valid JSON.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      400
+      400,
     );
   }
 
   const clientId = stringValue(
     body.clientId ?? body["client-id"] ?? body.projectId,
-    120
+    120,
   ).toLowerCase();
-
   const from = stringValue(body.from, 10);
   const to = stringValue(body.to, 10);
-
-  const question = stringValue(
-    body.question ?? body.message,
-    2000
-  );
-
+  const question = stringValue(body.question ?? body.message, 2_000);
   const contextValue = stringValue(
     body.pageContext ?? body.context ?? "auto",
-    20
+    20,
   ).toLowerCase();
-
-  const pageContext = CONTEXTS.has(contextValue)
-    ? contextValue
-    : "auto";
+  const pageContext = CONTEXTS.has(contextValue) ? contextValue : "auto";
 
   if (!clientId) {
     return jsonResponse(
@@ -186,26 +154,22 @@ export default async function handler(request) {
         code: "CLIENT_REQUIRED",
         error: "clientId is required.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      400
+      400,
     );
   }
 
-  if (
-    !isValidDate(from) ||
-    !isValidDate(to) ||
-    from > to
-  ) {
+  if (!isValidDate(from) || !isValidDate(to) || from > to) {
     return jsonResponse(
       {
         ok: false,
         code: "INVALID_DATE_RANGE",
         error: "Provide a valid from and to date range.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      400
+      400,
     );
   }
 
@@ -216,16 +180,14 @@ export default async function handler(request) {
         code: "QUESTION_REQUIRED",
         error: "question must contain at least 3 characters.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      400
+      400,
     );
   }
 
   const conversation = (
-    Array.isArray(body.conversation)
-      ? body.conversation
-      : []
+    Array.isArray(body.conversation) ? body.conversation : []
   )
     .slice(-8)
     .map((message) => ({
@@ -234,24 +196,24 @@ export default async function handler(request) {
           ? "assistant"
           : "user",
       content: stringValue(
-        message?.content ??
-          message?.text ??
-          message?.message,
-        1200
-      )
+        message?.content ?? message?.text ?? message?.message,
+        1_200,
+      ),
     }))
     .filter((message) => message.content);
 
-  const baseUrl = stringValue(
-    Netlify.env.get("N8N_BASE_URL"),
-    500
-  ).replace(/\/+$/, "");
-
+  const baseUrl = stringValue(Netlify.env.get("N8N_BASE_URL"), 500).replace(
+    /\/+$/,
+    "",
+  );
   const webhookPath =
-    stringValue(
-      Netlify.env.get("N8N_AI_WEBHOOK_PATH"),
-      500
-    ) || "/webhook/seo-report-ai-assistant";
+    stringValue(Netlify.env.get("N8N_AI_WEBHOOK_PATH"), 500) ||
+    "/webhook/seo-report-ai-assistant";
+  const sharedSecret = stringValue(
+    Netlify.env.get("SEO_REPORT_SHARED_SECRET"),
+    2_000,
+  );
+  const legacySecret = stringValue(Netlify.env.get("N8N_PROXY_SECRET"), 2_000);
 
   if (!baseUrl) {
     return jsonResponse(
@@ -260,28 +222,33 @@ export default async function handler(request) {
         code: "N8N_BASE_URL_MISSING",
         error: "The AI service is not configured.",
         requestId,
-        retryable: false
+        retryable: false,
       },
-      500
+      500,
     );
   }
 
-  const upstreamUrl = new URL(
-    webhookPath,
-    `${baseUrl}/`
-  ).toString();
+  if (!sharedSecret) {
+    return jsonResponse(
+      {
+        ok: false,
+        code: "N8N_SHARED_SECRET_MISSING",
+        error: "The AI service authentication is not configured.",
+        requestId,
+        retryable: false,
+      },
+      500,
+    );
+  }
 
+  const upstreamUrl = new URL(webhookPath, `${baseUrl}/`).toString();
   const headers = {
     accept: "application/json",
     "content-type": "application/json",
-    "x-request-id": requestId
+    "x-request-id": requestId,
+    "x-seo-report-secret": sharedSecret,
+    ...(legacySecret ? { "x-seo-proxy-secret": legacySecret } : {}),
   };
-
-  const proxySecret = Netlify.env.get("N8N_PROXY_SECRET");
-
-  if (proxySecret) {
-    headers["x-seo-proxy-secret"] = proxySecret;
-  }
 
   const upstreamBody = {
     clientId,
@@ -294,27 +261,22 @@ export default async function handler(request) {
     forceRefresh: false,
     allowStale: false,
     debug: body.debug === true,
-    requestId
+    requestId,
   };
 
   const controller = new AbortController();
-
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 36000);
+  const timeout = setTimeout(() => controller.abort(), 36_000);
 
   try {
     const upstreamResponse = await fetch(upstreamUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(upstreamBody),
-      signal: controller.signal
+      signal: controller.signal,
     });
 
     const upstreamText = await upstreamResponse.text();
-
     let payload;
-
     try {
       payload = JSON.parse(upstreamText);
     } catch {
@@ -324,9 +286,9 @@ export default async function handler(request) {
           code: "AI_UPSTREAM_INVALID_JSON",
           error: "The AI service returned an invalid response.",
           requestId,
-          retryable: true
+          retryable: true,
         },
-        502
+        502,
       );
     }
 
@@ -342,42 +304,30 @@ export default async function handler(request) {
           requestId,
           retryable: true,
           ...(payload?.fallbackAnswer
-            ? {
-                details: {
-                  fallbackAnswer: payload.fallbackAnswer
-                }
-              }
-            : {})
+            ? { details: { fallbackAnswer: payload.fallbackAnswer } }
+            : {}),
         },
-        upstreamResponse.status >= 400
-          ? upstreamResponse.status
-          : 502
+        upstreamResponse.status >= 400 ? upstreamResponse.status : 502,
       );
     }
 
     return jsonResponse(
-      {
-        ...payload,
-        requestId: payload.requestId || requestId
-      },
-      200
+      { ...payload, requestId: payload.requestId || requestId },
+      200,
     );
   } catch (error) {
     const timedOut = error?.name === "AbortError";
-
     return jsonResponse(
       {
         ok: false,
-        code: timedOut
-          ? "AI_UPSTREAM_TIMEOUT"
-          : "AI_PROXY_ERROR",
+        code: timedOut ? "AI_UPSTREAM_TIMEOUT" : "AI_PROXY_ERROR",
         error: timedOut
           ? "The AI assistant took too long to respond."
           : "The AI assistant request failed.",
         requestId,
-        retryable: true
+        retryable: true,
       },
-      timedOut ? 504 : 502
+      timedOut ? 504 : 502,
     );
   } finally {
     clearTimeout(timeout);
@@ -390,6 +340,6 @@ export const config = {
     action: "rate_limit",
     aggregateBy: ["ip"],
     windowSize: 60,
-    windowLimit: 12
-  }
+    windowLimit: 12,
+  },
 };
