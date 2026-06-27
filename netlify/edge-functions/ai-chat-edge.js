@@ -255,7 +255,7 @@ message?.message,
 const baseUrl = stringValue(
 Netlify.env.get("N8N_BASE_URL"),
 500,
-).replace(//+$/, "");
+).replace(/\/+$/, "");
 
 const webhookPath =
 stringValue(
