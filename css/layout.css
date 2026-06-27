@@ -642,3 +642,312 @@ canvas {
 @media (max-width: 720px) {
   .btn-refresh-data { grid-column: 1 / -1; width: 100%; }
 }
+
+/* ─── GSC and AI Traffic report views ─────────────────── */
+#dashboardContent,
+#ga4TabContent,
+#gscTabContent,
+#aiTrafficTabContent {
+  transition: opacity 0.18s ease;
+}
+
+.report-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+}
+
+.report-chart-row,
+.report-section-card {
+  margin-bottom: 18px;
+}
+
+.chart-card-tall {
+  min-height: 390px;
+}
+
+.chart-canvas-tall {
+  position: relative;
+  height: 300px;
+}
+
+.chart-canvas-medium {
+  position: relative;
+  height: 225px;
+}
+
+.chart-canvas-tall canvas,
+.chart-canvas-medium canvas {
+  max-height: none;
+}
+
+.chart-header-wrap {
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.segmented-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f7f8fa;
+}
+
+.segmented-tabs-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.segmented-tab {
+  min-height: 28px;
+  padding: 5px 9px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 600 10px/1.2 'Inter', sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.segmented-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.75);
+}
+
+.segmented-tab.active {
+  color: var(--accent-orange);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.08);
+}
+
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.table-search {
+  width: min(260px, 100%);
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-primary);
+  font: 500 11px 'Inter', sans-serif;
+  outline: none;
+}
+
+.table-search:focus {
+  border-color: var(--accent-orange);
+  box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+}
+
+.toolbar-note {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.report-data-table {
+  min-width: 980px;
+}
+
+.table-text-wrap {
+  min-width: 190px;
+  max-width: 360px;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.table-link {
+  color: var(--accent-sky);
+  text-decoration: none;
+}
+
+.table-link:hover {
+  text-decoration: underline;
+}
+
+.table-empty {
+  padding: 28px 12px !important;
+  text-align: center;
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+.table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 12px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.table-pager button {
+  height: 30px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-secondary);
+  font: 600 10px 'Inter', sans-serif;
+  cursor: pointer;
+}
+
+.table-pager button:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.table-pager button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.delta-badge,
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.delta-badge.positive,
+.status-growing,
+.status-new {
+  background: rgba(34,197,94,0.11);
+  color: #15803d;
+}
+
+.delta-badge.negative,
+.status-declining,
+.status-lost {
+  background: rgba(239,68,68,0.1);
+  color: #dc2626;
+}
+
+.status-stable {
+  background: rgba(100,116,139,0.1);
+  color: #64748b;
+}
+
+.data-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 10px 13px;
+  border: 1px solid rgba(245,158,11,0.22);
+  border-radius: 9px;
+  background: rgba(245,158,11,0.07);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.data-notice svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--accent-amber);
+}
+
+.data-notice-info {
+  border-color: rgba(59,130,246,0.2);
+  background: rgba(59,130,246,0.06);
+}
+
+.data-notice-info svg { color: var(--accent-sky); }
+
+.data-notice-danger {
+  border-color: rgba(239,68,68,0.25);
+  background: rgba(239,68,68,0.07);
+}
+
+.data-notice-danger svg { color: var(--accent-rose); }
+
+.page-notices {
+  margin-bottom: 4px;
+}
+
+.notice-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.data-note {
+  padding: 10px 13px;
+  border: 1px solid rgba(245,158,11,0.18);
+  border-radius: 8px;
+  background: rgba(245,158,11,0.06);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.metric-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.metric-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.metric-summary-row strong {
+  color: var(--text-primary);
+  font-size: 10px;
+  text-align: right;
+}
+
+.empty-inline {
+  padding: 22px 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .report-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .table-toolbar { align-items: stretch; flex-direction: column; }
+  .table-search { width: 100%; }
+}
+
+@media (max-width: 720px) {
+  .report-kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .segmented-tabs { width: 100%; overflow-x: auto; }
+  .table-pager { justify-content: space-between; }
+  .chart-card-tall { min-height: 340px; }
+  .chart-canvas-tall { height: 250px; }
+}
+
+@media (max-width: 520px) {
+  .report-kpi-grid { grid-template-columns: 1fr; }
+  .chart-canvas-tall { height: 230px; }
+  .table-pager span { text-align: center; }
+}

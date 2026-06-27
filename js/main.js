@@ -14,4 +14,6 @@ document.addEventListener('DOMContentLoaded', async function () {
   await loadClientOptions();
   loadDemoPreview();
   initGa4Tab();
+  if (typeof initGscView === 'function') initGscView();
+  if (typeof initAiTrafficView === 'function') initAiTrafficView();
 });

@@ -11,7 +11,13 @@ async function exportPDF() {
   const oldScrollX = window.scrollX;
   const oldScrollY = window.scrollY;
   const activeView = window.SeoDashboardState?.activeView || 'overview';
-  const activeReport = activeView === 'ga4' ? currentGa4Report : currentReport;
+  const activeReports = {
+    overview: currentReport,
+    ga4: currentGa4Report,
+    gsc: currentGscReport,
+    ai: currentAiTrafficReport
+  };
+  const activeReport = activeReports[activeView] || currentReport;
   const hiddenEls = [];
 
   btn.disabled = true;
@@ -113,7 +119,13 @@ async function exportPDF() {
     const safeProject = String(filters.projectId || 'report').replace(/[^a-z0-9_-]+/gi, '_');
     const safeFrom = String(filters.from || '').replace(/-/g, '');
     const safeTo = String(filters.to || '').replace(/-/g, '');
-    const viewLabel = activeView === 'ga4' ? 'GA4' : 'Overview';
+    const viewLabels = {
+      overview: 'Overview',
+      ga4: 'GA4',
+      gsc: 'GSC',
+      ai: 'AI_Traffic'
+    };
+    const viewLabel = viewLabels[activeView] || 'Overview';
     pdf.save(`SEO_${viewLabel}_${safeProject}_${safeFrom}_${safeTo}.pdf`);
   } catch (error) {
     console.error(error);

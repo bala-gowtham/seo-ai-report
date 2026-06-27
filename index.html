@@ -16,6 +16,8 @@
   <script defer src="js/ui.js"></script>
   <script defer src="js/export.js"></script>
   <script defer src="js/ga4.js"></script>
+  <script defer src="js/gsc.js"></script>
+  <script defer src="js/ai-traffic.js"></script>
   <script defer src="js/netlify-integration.js"></script>
   <script defer src="js/ai-chat.js"></script>
   <script defer src="js/main.js"></script>
@@ -47,6 +49,14 @@
     <div class="nav-item" id="navGa4" role="button" tabindex="0" aria-label="GA4 Analytics tab">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="8"/><rect x="13" y="6" width="3" height="12"/></svg>
       GA4 Analytics
+    </div>
+    <div class="nav-item" id="navGsc" role="button" tabindex="0" aria-label="Google Search Console tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8 11h6"/><path d="M11 8v6"/></svg>
+      Search Console
+    </div>
+    <div class="nav-item" id="navAiTraffic" role="button" tabindex="0" aria-label="AI Traffic tab">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="m5.6 5.6 2.1 2.1"/><path d="m16.3 16.3 2.1 2.1"/><path d="m18.4 5.6-2.1 2.1"/><path d="m7.7 16.3-2.1 2.1"/><circle cx="12" cy="12" r="4"/></svg>
+      AI Traffic
     </div>
 
     <div class="nav-section">Reports</div>
@@ -485,6 +495,130 @@
       </footer>
 
     </div><!-- end #ga4TabContent -->
+
+
+    <!-- ═══ Google Search Console View ═══════════════════════ -->
+    <div id="gscTabContent" style="display:none">
+      <div id="gscQualityNotice" class="data-notice" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        <span data-notice-text></span>
+      </div>
+
+      <div class="section-header">
+        <div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="section-label">Search Performance KPIs</span></div>
+        <span class="section-desc">Current period vs previous period · Google Search Console</span>
+      </div>
+      <section class="kpi-grid report-kpi-grid" id="gscKpiStrip" aria-label="GSC KPI summary"></section>
+
+      <div class="section-header">
+        <div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg><span class="section-label">Search Trends &amp; Visibility</span></div>
+        <span class="section-desc">Daily performance and ranking distribution</span>
+      </div>
+      <section class="charts-row charts-row-equal report-chart-row">
+        <div class="chart-card chart-card-tall">
+          <div class="chart-header chart-header-wrap">
+            <div><div class="chart-title">Search Performance Trend</div><div class="chart-subtitle">Compare the selected metric with the previous period</div></div>
+            <div class="segmented-tabs" id="gscMetricTabs" aria-label="GSC trend metric">
+              <button type="button" class="segmented-tab active" data-gsc-metric="clicks">Clicks</button>
+              <button type="button" class="segmented-tab" data-gsc-metric="impressions">Impressions</button>
+              <button type="button" class="segmented-tab" data-gsc-metric="ctr">CTR</button>
+              <button type="button" class="segmented-tab" data-gsc-metric="position">Position</button>
+            </div>
+          </div>
+          <div class="chart-canvas-tall"><canvas id="gscTrendChart"></canvas></div>
+        </div>
+        <div class="chart-card chart-card-tall">
+          <div class="chart-header"><div><div class="chart-title">Keyword Position Distribution</div><div class="chart-subtitle">Current keyword count vs previous period</div></div><span class="tag tag-violet">GSC</span></div>
+          <div class="chart-canvas-tall"><canvas id="gscPositionChart"></canvas></div>
+        </div>
+      </section>
+
+      <div class="section-header">
+        <div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/></svg><span class="section-label">Search Opportunities</span></div>
+        <span class="section-desc">High-impression queries with room to improve</span>
+      </div>
+      <section class="chart-card chart-card-full report-section-card">
+        <div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Query</th><th style="text-align:right">Score</th><th style="text-align:right">Impressions</th><th style="text-align:right">Clicks</th><th style="text-align:right">CTR</th><th style="text-align:right">Position</th><th style="text-align:right">Position Δ</th><th>Status</th></tr></thead><tbody id="gscOpportunityTableBody"></tbody></table></div>
+      </section>
+
+      <div class="section-header">
+        <div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="section-label">Query Performance</span></div>
+        <span class="section-desc">Search, compare, and inspect compact cached query datasets</span>
+      </div>
+      <section class="chart-card chart-card-full report-section-card">
+        <div class="table-toolbar">
+          <div class="segmented-tabs segmented-tabs-scroll" id="gscQueryTabs">
+            <button type="button" class="segmented-tab active" data-gsc-query-dataset="queries">Top queries</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="queryWinners">Winners</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="queryLosers">Declines</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="rankingGainers">Ranking gains</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="rankingLosers">Ranking losses</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="ctrGainers">CTR gains</button>
+            <button type="button" class="segmented-tab" data-gsc-query-dataset="ctrLosers">CTR losses</button>
+          </div>
+          <input id="gscQuerySearch" class="table-search" type="search" placeholder="Search queries" aria-label="Search GSC queries" />
+        </div>
+        <div class="table-scroll"><table class="data-table report-data-table"><thead><tr><th>#</th><th>Query</th><th style="text-align:right">Clicks</th><th style="text-align:right">Prev</th><th style="text-align:right">Click Δ</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">Position</th><th style="text-align:right">Position Δ</th><th>Status</th></tr></thead><tbody id="gscQueryTableBody"></tbody></table></div>
+        <div class="table-pager" id="gscQueryPager"><button id="gscQueryPrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscQueryNext" data-page-next type="button">Next</button></div>
+      </section>
+
+      <div class="section-header">
+        <div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="section-label">Landing Page Search Performance</span></div>
+        <span class="section-desc">Pages gaining or losing visibility and clicks</span>
+      </div>
+      <section class="chart-card chart-card-full report-section-card">
+        <div class="table-toolbar"><div class="segmented-tabs" id="gscPageTabs"><button type="button" class="segmented-tab active" data-gsc-page-dataset="pages">Top pages</button><button type="button" class="segmented-tab" data-gsc-page-dataset="pageWinners">Winners</button><button type="button" class="segmented-tab" data-gsc-page-dataset="pageLosers">Declines</button></div><input id="gscPageSearch" class="table-search" type="search" placeholder="Search page URLs" aria-label="Search GSC pages" /></div>
+        <div class="table-scroll"><table class="data-table report-data-table"><thead><tr><th>#</th><th>Page</th><th style="text-align:right">Clicks</th><th style="text-align:right">Prev</th><th style="text-align:right">Click Δ</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">Position</th><th style="text-align:right">Position Δ</th><th>Status</th></tr></thead><tbody id="gscPageTableBody"></tbody></table></div>
+        <div class="table-pager" id="gscPagePager"><button id="gscPagePrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscPageNext" data-page-next type="button">Next</button></div>
+      </section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="section-label">Audience &amp; Search Features</span></div><span class="section-desc">Device, country, and appearance breakdowns</span></div>
+      <section class="charts-row charts-row-third report-chart-row">
+        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Devices</div><div class="chart-subtitle">Search performance by device</div></div><span class="tag tag-teal">GSC</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Device</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impr.</th><th style="text-align:right">CTR</th><th style="text-align:right">Pos.</th><th>Status</th></tr></thead><tbody id="gscDeviceTableBody"></tbody></table></div></div>
+        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Top Countries</div><div class="chart-subtitle">Search visibility by country</div></div><span class="tag tag-sky">GSC</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Country</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impr.</th><th style="text-align:right">CTR</th><th style="text-align:right">Pos.</th><th>Status</th></tr></thead><tbody id="gscCountryTableBody"></tbody></table></div></div>
+        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Search Appearance</div><div class="chart-subtitle">Google result feature categories</div></div><span class="tag tag-amber">GSC</span></div><div id="gscAppearanceSummary" class="metric-summary-list"></div></div>
+      </section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="section-label">Page to Query Relationships</span></div><span class="section-desc">Which queries are driving each landing page</span></div>
+      <section class="chart-card chart-card-full report-section-card">
+        <div class="table-toolbar"><span class="toolbar-note">Compact cache contains the leading page-query combinations.</span><input id="gscPageQuerySearch" class="table-search" type="search" placeholder="Search page or query" aria-label="Search page-query rows" /></div>
+        <div class="table-scroll"><table class="data-table report-data-table"><thead><tr><th>#</th><th>Page</th><th>Query</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impressions</th><th style="text-align:right">CTR</th><th style="text-align:right">Position</th><th>Status</th></tr></thead><tbody id="gscPageQueryTableBody"></tbody></table></div>
+        <div class="table-pager" id="gscPageQueryPager"><button id="gscPageQueryPrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscPageQueryNext" data-page-next type="button">Next</button></div>
+      </section>
+
+      <div id="gscWarnings"></div>
+      <footer class="report-footer"><span id="gscFooterDate"></span><span class="footer-sep">·</span><span>Google Search Console · Powered by SEO Intel</span></footer>
+    </div><!-- end #gscTabContent -->
+
+    <!-- ═══ AI Traffic View ═════════════════════════════════ -->
+    <div id="aiTrafficTabContent" style="display:none">
+      <div class="notice-stack page-notices">
+        <div id="aiSmallSampleNotice" class="data-notice data-notice-warning" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span data-notice-text></span></div>
+        <div id="aiClassificationNotice" class="data-notice data-notice-info" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><span data-notice-text></span></div>
+        <div id="aiQualityNotice" class="data-notice" style="display:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 16 4-4 3 3 5-6"/></svg><span data-notice-text></span></div>
+      </div>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span class="section-label">AI Referral KPIs</span></div><span class="section-desc">Tracked referrals from assistants such as ChatGPT, Gemini, and Perplexity</span></div>
+      <section class="kpi-grid report-kpi-grid" id="aiTrafficKpiStrip" aria-label="AI traffic KPI summary"></section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg><span class="section-label">AI Traffic Trend &amp; Devices</span></div><span class="section-desc">Missing traffic dates are displayed as zero</span></div>
+      <section class="charts-row charts-row-equal report-chart-row">
+        <div class="chart-card chart-card-tall"><div class="chart-header"><div><div class="chart-title">AI Referral Sessions</div><div class="chart-subtitle">Current period vs previous equal-length period</div></div><span class="tag tag-violet">AI</span></div><div class="chart-canvas-tall"><canvas id="aiTrafficTrendChart"></canvas></div></div>
+        <div class="chart-card chart-card-tall"><div class="chart-header"><div><div class="chart-title">Device Split</div><div class="chart-subtitle">AI sessions and engagement by device</div></div><span class="tag tag-sky">GA4</span></div><div class="chart-canvas-medium"><canvas id="aiTrafficDeviceChart"></canvas></div><div id="aiDeviceDetailList" class="metric-summary-list"></div></div>
+      </section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg><span class="section-label">AI Referral Sources</span></div><span class="section-desc">Source quality, engagement, and conversions</span></div>
+      <section class="chart-card chart-card-full report-section-card"><div class="table-scroll"><table class="data-table report-data-table"><thead><tr><th>#</th><th>Source</th><th style="text-align:right">Sessions</th><th style="text-align:right">Prev</th><th style="text-align:right">Change</th><th style="text-align:right">Users</th><th style="text-align:right">Engagement</th><th style="text-align:right">Conversions</th><th>Status</th></tr></thead><tbody id="aiSourceDetailTableBody"></tbody></table></div></section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="section-label">AI Landing Pages</span></div><span class="section-desc">Pages receiving or losing measurable AI referral sessions</span></div>
+      <section class="chart-card chart-card-full report-section-card"><div class="table-toolbar"><span class="toolbar-note">Lost rows are retained to show pages that had AI traffic in the comparison period.</span><input id="aiLandingSearch" class="table-search" type="search" placeholder="Search landing pages" aria-label="Search AI landing pages" /></div><div class="table-scroll"><table class="data-table report-data-table"><thead><tr><th>#</th><th>Landing Page</th><th style="text-align:right">Sessions</th><th style="text-align:right">Prev</th><th style="text-align:right">Change</th><th style="text-align:right">Users</th><th style="text-align:right">Engagement</th><th style="text-align:right">Views</th><th style="text-align:right">Avg. Duration</th><th>Status</th></tr></thead><tbody id="aiLandingDetailTableBody"></tbody></table></div><div class="table-pager" id="aiLandingPager"><button id="aiLandingPrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="aiLandingNext" data-page-next type="button">Next</button></div></section>
+
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="section-label">AI Traffic by Country</span></div><span class="section-desc">Geographic distribution of detectable assistant referrals</span></div>
+      <section class="chart-card chart-card-full report-section-card"><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Country</th><th style="text-align:right">Sessions</th><th style="text-align:right">Prev</th><th style="text-align:right">Change</th><th style="text-align:right">Engagement</th><th style="text-align:right">Conversions</th><th>Status</th></tr></thead><tbody id="aiCountryTableBody"></tbody></table></div></section>
+
+      <div id="aiTrafficWarnings"></div>
+      <footer class="report-footer"><span id="aiTrafficFooterDate"></span><span class="footer-sep">·</span><span>AI Referral Traffic · Powered by SEO Intel</span></footer>
+    </div><!-- end #aiTrafficTabContent -->
 
     <!-- Footer -->
     <footer class="report-footer" id="reportFooter">

@@ -67,58 +67,82 @@ function getGa4DemoReport(filters = {}) {
   };
 }
 
+const REPORT_PANEL_CONFIG = {
+  overview: {
+    navId: 'navOverview',
+    panelId: 'dashboardContent',
+    title: 'SEO Overview',
+    logoSub: 'Overview'
+  },
+  ga4: {
+    navId: 'navGa4',
+    panelId: 'ga4TabContent',
+    title: 'GA4 Analytics',
+    logoSub: 'GA4'
+  },
+  gsc: {
+    navId: 'navGsc',
+    panelId: 'gscTabContent',
+    title: 'Google Search Console',
+    logoSub: 'GSC'
+  },
+  ai: {
+    navId: 'navAiTraffic',
+    panelId: 'aiTrafficTabContent',
+    title: 'AI Traffic',
+    logoSub: 'AI Traffic'
+  }
+};
+
 function setActivePanel(view) {
-  const navOverview = document.getElementById('navOverview');
-  const navGa4 = document.getElementById('navGa4');
-  const panelMain = document.getElementById('dashboardContent');
-  const panelGa4 = document.getElementById('ga4TabContent');
+  const activeView = REPORT_PANEL_CONFIG[view] ? view : 'overview';
   const footer = document.getElementById('reportFooter');
   const insight = document.getElementById('insightBanner');
   const error = document.getElementById('errorState');
   const title = document.querySelector('.page-title');
-  const isGa4 = view === 'ga4';
+  const logoSub = document.querySelector('.logo-sub');
 
-  SeoDashboardState.setActiveView(isGa4 ? 'ga4' : 'overview');
-  navOverview?.classList.toggle('active', !isGa4);
-  navGa4?.classList.toggle('active', isGa4);
-  navOverview?.setAttribute('aria-current', isGa4 ? 'false' : 'page');
-  navGa4?.setAttribute('aria-current', isGa4 ? 'page' : 'false');
+  SeoDashboardState.setActiveView(activeView);
 
-  if (panelMain) panelMain.style.display = isGa4 ? 'none' : '';
-  if (panelGa4) panelGa4.style.display = isGa4 ? 'block' : 'none';
-  if (footer) footer.style.display = isGa4 ? 'none' : '';
-  if (title) title.textContent = isGa4 ? 'GA4 Analytics' : 'SEO Overview';
+  Object.entries(REPORT_PANEL_CONFIG).forEach(([key, config]) => {
+    const nav = document.getElementById(config.navId);
+    const panel = document.getElementById(config.panelId);
+    const isActive = key === activeView;
+
+    nav?.classList.toggle('active', isActive);
+    nav?.setAttribute('aria-current', isActive ? 'page' : 'false');
+    if (panel) panel.style.display = isActive ? 'block' : 'none';
+  });
+
+  if (footer) footer.style.display = activeView === 'overview' ? '' : 'none';
+  if (title) title.textContent = REPORT_PANEL_CONFIG[activeView].title;
+  if (logoSub) logoSub.textContent = REPORT_PANEL_CONFIG[activeView].logoSub;
   if (error) error.style.display = 'none';
 
   if (insight) {
-    if (isGa4) insight.style.display = 'none';
-    else if (currentReport) renderInsightBanner(currentReport);
+    if (activeView === 'overview' && currentReport) renderInsightBanner(currentReport);
+    else insight.style.display = 'none';
   }
 }
 
 // ── Tab switching ─────────────────────────────────────────
 function initGa4Tab() {
-  const navOverview = document.getElementById('navOverview');
-  const navGa4 = document.getElementById('navGa4');
-  if (!navGa4 || !document.getElementById('ga4TabContent')) return;
+  Object.entries(REPORT_PANEL_CONFIG).forEach(([view, config]) => {
+    const nav = document.getElementById(config.navId);
+    if (!nav || !document.getElementById(config.panelId)) return;
 
-  const openGa4 = () => {
-    setActivePanel('ga4');
-    loadReportView('ga4').catch(() => {});
-  };
+    const openView = () => {
+      setActivePanel(view);
+      const filters = getCurrentFilters();
+      const report = SeoDashboardState.getReport(view, filters);
 
-  const openOverview = () => {
-    setActivePanel('overview');
-    const filters = getCurrentFilters();
-    const report = SeoDashboardState.getReport('overview', filters) || currentReport;
-    if (report) renderDashboard(report);
-    else loadReportView('overview').catch(() => {});
-  };
+      if (report) renderViewReport(view, report);
+      else loadReportView(view).catch(() => {});
+    };
 
-  navGa4.addEventListener('click', openGa4);
-  navOverview?.addEventListener('click', openOverview);
-  activateOnKeyboard(navGa4, openGa4);
-  activateOnKeyboard(navOverview, openOverview);
+    nav.addEventListener('click', openView);
+    activateOnKeyboard(nav, openView);
+  });
 }
 
 // ── Main render ───────────────────────────────────────────

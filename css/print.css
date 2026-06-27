@@ -160,3 +160,18 @@ body.dashboard-exporting #errorState {
 @media print {
   @page { size: A4 portrait; margin: 0; }
 }
+
+body.dashboard-exporting .table-toolbar,
+body.dashboard-exporting .table-pager,
+body.dashboard-exporting .segmented-tabs {
+  display: none !important;
+}
+
+body.dashboard-exporting .chart-canvas-tall,
+body.dashboard-exporting .chart-canvas-medium {
+  height: 220px !important;
+}
+
+body.dashboard-exporting .report-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}

@@ -1,10 +1,24 @@
 let currentReport = null;
 let currentGa4Report = null;
+let currentGscReport = null;
+let currentAiTrafficReport = null;
 
 function renderViewReport(view, report) {
   if (view === 'ga4') {
     currentGa4Report = report;
     if (typeof renderGa4Tab === 'function') renderGa4Tab(report);
+    return;
+  }
+
+  if (view === 'gsc') {
+    currentGscReport = report;
+    if (typeof renderGscTab === 'function') renderGscTab(report);
+    return;
+  }
+
+  if (view === 'ai') {
+    currentAiTrafficReport = report;
+    if (typeof renderAiTrafficTab === 'function') renderAiTrafficTab(report);
     return;
   }
 
@@ -168,12 +182,18 @@ function initReportControls() {
 }
 
 async function loadReportView(view = 'overview', options = {}) {
-  const activeView = view === 'ga4' ? 'ga4' : 'overview';
+  const activeView = REPORT_VIEWS.has(view) ? view : 'overview';
   const submitBtn = document.getElementById('submitReportBtn');
   const loading = document.getElementById('loadingState');
   const error = document.getElementById('errorState');
   const errorMessage = document.getElementById('errorMessage');
-  const panel = document.getElementById(activeView === 'ga4' ? 'ga4TabContent' : 'dashboardContent');
+  const panelIds = {
+    overview: 'dashboardContent',
+    ga4: 'ga4TabContent',
+    gsc: 'gscTabContent',
+    ai: 'aiTrafficTabContent'
+  };
+  const panel = document.getElementById(panelIds[activeView]);
   const filters = getCurrentFilters();
 
   SeoDashboardState.setActiveView(activeView);
@@ -184,18 +204,26 @@ async function loadReportView(view = 'overview', options = {}) {
   if (panel) panel.style.opacity = '1';
 
   if (!filters.projectId || filters.projectId === 'demo') {
+    let demo;
+
     if (activeView === 'ga4') {
-      const demo = typeof getGa4DemoReport === 'function'
+      demo = typeof getGa4DemoReport === 'function'
         ? getGa4DemoReport(filters)
         : { meta: { ...filters } };
-      SeoDashboardState.setReport('ga4', demo, filters);
-      renderViewReport('ga4', demo);
-      return demo;
+    } else if (activeView === 'gsc') {
+      demo = typeof getGscDemoReport === 'function'
+        ? getGscDemoReport(filters)
+        : { view: 'gsc', meta: { ...filters }, gsc: {} };
+    } else if (activeView === 'ai') {
+      demo = typeof getAiTrafficDemoReport === 'function'
+        ? getAiTrafficDemoReport(filters)
+        : { view: 'ai', meta: { ...filters }, aiTraffic: {} };
+    } else {
+      demo = getDemoData(filters);
     }
 
-    const demo = getDemoData(filters);
-    SeoDashboardState.setReport('overview', demo, filters);
-    renderViewReport('overview', demo);
+    SeoDashboardState.setReport(activeView, demo, filters);
+    renderViewReport(activeView, demo);
     return demo;
   }
 

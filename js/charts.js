@@ -295,9 +295,23 @@ function renderCharts(report) {
 }
 
 function resizeCharts() {
+  const seen = new Set();
+
   Object.values(chartInstances).forEach(chart => {
-    if (chart && typeof chart.resize === 'function') chart.resize();
+    if (chart && typeof chart.resize === 'function') {
+      chart.resize();
+      seen.add(chart);
+    }
   });
+
+  if (typeof Chart?.getChart === 'function') {
+    document.querySelectorAll('canvas').forEach(canvas => {
+      const chart = Chart.getChart(canvas);
+      if (chart && !seen.has(chart) && typeof chart.resize === 'function') {
+        chart.resize();
+      }
+    });
+  }
 }
 
 // ── Shared options helpers ────────────────────────────────

@@ -2,11 +2,13 @@ const REPORT_CONFIG = {
   useDemoFallback: false
 };
 
+const REPORT_VIEWS = new Set(['overview', 'ga4', 'gsc', 'ai']);
+
 const SeoDashboardState = {
   activeView: 'overview',
   filterKey: '',
   filters: null,
-  reports: { overview: null, ga4: null },
+  reports: { overview: null, ga4: null, gsc: null, ai: null },
   builds: new Map(),
 
   makeFilterKey(params = {}) {
@@ -17,7 +19,7 @@ const SeoDashboardState = {
     const nextKey = this.makeFilterKey(params);
     if (nextKey !== this.filterKey) {
       this.filterKey = nextKey;
-      this.reports = { overview: null, ga4: null };
+      this.reports = { overview: null, ga4: null, gsc: null, ai: null };
     }
     this.filters = { ...params };
     return nextKey;
@@ -36,11 +38,11 @@ const SeoDashboardState = {
   },
 
   setActiveView(view) {
-    this.activeView = view === 'ga4' ? 'ga4' : 'overview';
+    this.activeView = REPORT_VIEWS.has(view) ? view : 'overview';
   },
 
   clearReports() {
-    this.reports = { overview: null, ga4: null };
+    this.reports = { overview: null, ga4: null, gsc: null, ai: null };
   }
 };
 
@@ -254,7 +256,7 @@ async function waitForSnapshot(api, input) {
 }
 
 async function fetchReportData(params) {
-  const view = params.view === 'ga4' ? 'ga4' : 'overview';
+  const view = REPORT_VIEWS.has(params.view) ? params.view : 'overview';
   const input = {
     clientId: params.projectId,
     from: params.from,
@@ -306,9 +308,116 @@ async function fetchReportData(params) {
 }
 
 function normalizeReportView(report, params = {}, view = 'overview') {
-  return view === 'ga4'
-    ? normalizeGa4ReportData(report, params)
-    : normalizeReportData(report, params);
+  if (view === 'ga4') return normalizeGa4ReportData(report, params);
+  if (view === 'gsc') return normalizeGscReportData(report, params);
+  if (view === 'ai') return normalizeAiTrafficReportData(report, params);
+  return normalizeReportData(report, params);
+}
+
+function normalizeViewMeta(payloadMeta = {}, incomingMeta = {}, params = {}, sourceLabel = '') {
+  const meta = {
+    ...(payloadMeta || {}),
+    ...(incomingMeta || {})
+  };
+
+  if (params.from) meta.from = params.from;
+  if (params.to) meta.to = params.to;
+
+  meta.projectId = meta.projectId || meta.clientId || params.projectId || '';
+  meta.projectName =
+    meta.projectName ||
+    meta.clientName ||
+    params.projectName ||
+    meta.projectId ||
+    'Selected project';
+  meta.comparisonMode = meta.comparisonMode || 'previous_equal_length_period';
+  meta.dateRangeLabel = meta.dateRangeLabel || formatDateRangeLabel(meta.from, meta.to);
+  meta.monthLabel = meta.monthLabel || meta.dateRangeLabel;
+  meta.sourceLabel = sourceLabel || meta.sourceLabel || '';
+
+  return meta;
+}
+
+function normalizeGscReportData(report, params = {}) {
+  const incoming = report || {};
+  const payload = incoming.gsc && typeof incoming.gsc === 'object'
+    ? incoming.gsc
+    : incoming;
+
+  const meta = normalizeViewMeta(
+    payload.meta,
+    incoming.meta,
+    params,
+    'Google Search Console'
+  );
+
+  const gsc = {
+    ...payload,
+    meta: { ...(payload.meta || {}), ...meta },
+    kpis: { ...(payload.kpis || {}), ...(incoming.kpis || {}) },
+    trend: {
+      labels: safeArray(payload.trend?.labels),
+      impressions: safeArray(payload.trend?.impressions),
+      clicks: safeArray(payload.trend?.clicks),
+      prevImpressions: safeArray(payload.trend?.prevImpressions),
+      prevClicks: safeArray(payload.trend?.prevClicks),
+      previousLabels: safeArray(payload.trend?.previousLabels),
+      ctr: safeArray(payload.trend?.ctr),
+      prevCtr: safeArray(payload.trend?.prevCtr),
+      position: safeArray(payload.trend?.position),
+      prevPosition: safeArray(payload.trend?.prevPosition)
+    }
+  };
+
+  return {
+    ...incoming,
+    ok: incoming.ok !== false,
+    view: 'gsc',
+    partial:
+      incoming.partial === true ||
+      payload.partial === true ||
+      payload.dataQuality?.partial === true,
+    meta,
+    kpis: gsc.kpis,
+    gsc,
+    warnings: safeArray(incoming.warnings).length
+      ? safeArray(incoming.warnings)
+      : safeArray(payload.warnings)
+  };
+}
+
+function normalizeAiTrafficReportData(report, params = {}) {
+  const incoming = report || {};
+  const evidence = incoming.analyticsEvidence || {};
+  const ga4 = evidence.ga4 || {};
+  const aiTraffic = ga4.aiAssistantTraffic || incoming.aiTraffic || {};
+
+  const meta = normalizeViewMeta(
+    aiTraffic.meta,
+    incoming.meta,
+    params,
+    'AI Referral Traffic'
+  );
+
+  return {
+    ...incoming,
+    ok: incoming.ok !== false,
+    view: 'ai',
+    partial: incoming.partial === true,
+    meta,
+    kpis: { ...(incoming.kpis || {}) },
+    analyticsEvidence: evidence,
+    aiTraffic: {
+      ...aiTraffic,
+      kpis: { ...(aiTraffic.kpis || {}) },
+      sources: safeArray(aiTraffic.sources),
+      landingPages: safeArray(aiTraffic.landingPages),
+      devices: safeArray(aiTraffic.devices),
+      countries: safeArray(aiTraffic.countries),
+      warnings: safeArray(aiTraffic.warnings)
+    },
+    warnings: safeArray(incoming.warnings)
+  };
 }
 
 function normalizeGa4ReportData(report, params = {}) {
