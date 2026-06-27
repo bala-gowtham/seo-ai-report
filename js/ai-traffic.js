@@ -122,47 +122,46 @@ function renderAiTrafficMeta(report) {
 }
 
 function renderAiTrafficNotices(report, traffic) {
-  const sample = Number(traffic.kpis?.sessions?.value || 0);
-  const small = document.getElementById('aiSmallSampleNotice');
-  if (small) {
-    small.style.display = sample < 30 ? 'flex' : 'none';
-    const text = small.querySelector('[data-notice-text]');
-    if (text) text.textContent = `This period contains ${sample.toLocaleString()} AI referral session${sample===1?'':'s'}. Percentage changes can move sharply with a small sample.`;
+  const wrap = document.getElementById('aiTrafficNotices');
+  if (!wrap) return;
+  const sessions = Number(traffic.kpis?.sessions?.value || 0);
+  const supportingWarnings = (report.warnings || []).filter(item => /\b(ai|assistant|referral)\b/i.test(String(item)));
+  const notes = [];
+  if (sessions < 30) {
+    notes.push(`This period contains ${sessions.toLocaleString()} AI referral session${sessions === 1 ? '' : 's'}. Percentage changes can move sharply with a small sample.`);
   }
-
-  const classification = document.getElementById('aiClassificationNotice');
-  if (classification) {
-    const note = traffic.classification?.note;
-    classification.style.display = note ? 'flex' : 'none';
-    const text = classification.querySelector('[data-notice-text]');
-    if (text) text.textContent = note || '';
-  }
-
-  const quality = document.getElementById('aiQualityNotice');
-  if (quality) {
+  if (traffic.classification?.note) notes.push(traffic.classification.note);
+  if (report.partial) {
     const coverage = traffic.coverage || {};
     const dedicatedPartial = Object.values(coverage).some(value => value?.partial === true || value?.complete === false);
-    const text = quality.querySelector('[data-notice-text]');
-    quality.style.display = report.partial ? 'flex' : 'none';
-    quality.classList.toggle('data-notice-danger', dedicatedPartial);
-    if (text) {
-      text.textContent = dedicatedPartial
-        ? 'Some dedicated AI referral detail tables are incomplete.'
-        : 'AI referral detail is available, while some supporting GA4 or GSC tables use limited row coverage.';
-    }
+    notes.push(dedicatedPartial
+      ? 'Some dedicated AI referral detail tables are incomplete.'
+      : 'AI referral detail is available, while some supporting GA4 or GSC tables use limited row coverage.');
   }
+  notes.push(...(traffic.warnings || []), ...supportingWarnings);
+  const uniqueNotes = notes.filter((value, index, array) => value && array.indexOf(value) === index);
+  if (!uniqueNotes.length) {
+    wrap.style.display = 'none';
+    wrap.innerHTML = '';
+    return;
+  }
+  wrap.style.display = 'block';
+  wrap.innerHTML = `<details class="data-notes-card ai-data-notes">
+    <summary><span class="data-notes-icon" aria-hidden="true">i</span><span><strong>Data notes</strong><small>AI referral traffic</small></span><span class="data-notes-badge">${sessions < 30 ? `Small sample · ${sessions.toLocaleString()} sessions` : `${uniqueNotes.length} notes`}</span><span class="data-notes-chevron" aria-hidden="true"></span></summary>
+    <div class="data-notes-body"><p>AI referral traffic is a focused channel view and should be interpreted separately from Organic Search.</p><ul>${uniqueNotes.map(note => `<li>${escHtml(note)}</li>`).join('')}</ul></div>
+  </details>`;
 }
 
 function renderAiTrafficKpis(kpis) {
   const defs = [
-    ['sessions','AI Sessions','#8b5cf6'],
-    ['users','Users','#3b82f6'],
-    ['newUsers','New Users','#ff6b35'],
-    ['engagedSessions','Engaged Sessions','#14b8a6'],
+    ['sessions','AI Sessions','#f59e0b'],
+    ['users','Users','#2563eb'],
+    ['newUsers','New Users','#2563eb'],
+    ['engagedSessions','Engaged Sessions','#22c55e'],
     ['engagementRate','Engagement Rate','#22c55e'],
-    ['pageViews','Page Views','#ec4899'],
+    ['pageViews','Page Views','#f87171'],
     ['averageSessionDuration','Avg. Duration','#f59e0b'],
-    ['conversions','Conversions','#ef4444']
+    ['conversions','Conversions','#f87171']
   ];
   const wrap=document.getElementById('aiTrafficKpiStrip');
   if(!wrap)return;
@@ -189,7 +188,7 @@ function renderAiTrafficTrend(report, traffic) {
   aiTrafficTrendChart=new Chart(canvas,{
     type:'line',
     data:{labels,datasets:[
-      {label:'Current AI sessions',data:current.values,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.15)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3},
+      {label:'Current AI sessions',data:current.values,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.15)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3},
       {label:'Previous AI sessions',data:previous.values,borderColor:'#94a3b8',backgroundColor:'transparent',fill:false,tension:.3,borderWidth:1.5,borderDash:[5,4],pointRadius:2}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end'}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{precision:0}}}}
@@ -256,7 +255,7 @@ function renderAiTrafficDeviceChart(rows) {
   if(aiTrafficDeviceChart)aiTrafficDeviceChart.destroy();
   aiTrafficDeviceChart=new Chart(canvas,{
     type:'doughnut',
-    data:{labels:(rows||[]).map(r=>r.name||r.device||'Unknown'),datasets:[{data:(rows||[]).map(r=>Number(r.sessions??r.value??0)),backgroundColor:['#8b5cf6','#3b82f6','#14b8a6','#f59e0b'],borderWidth:0,hoverOffset:6}]},
+    data:{labels:(rows||[]).map(r=>r.name||r.device||'Unknown'),datasets:[{data:(rows||[]).map(r=>Number(r.sessions??r.value??0)),backgroundColor:['#f59e0b','#2563eb','#22c55e','#f59e0b'],borderWidth:0,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Number(ctx.raw||0).toLocaleString()} sessions`}}}}
   });
   const list=document.getElementById('aiDeviceDetailList');
@@ -269,14 +268,11 @@ function renderAiTrafficCountries(rows) {
   tbody.innerHTML=(rows||[]).length?(rows||[]).map((r,i)=>`<tr><td class="row-num">${i+1}</td><td class="primary-cell">${escHtml(aiCountryLabel(r.country||r.name))}</td><td class="num-cell">${formatInt(r.sessions??r.value)}</td><td class="num-cell">${formatInt(r.prevSessions??r.prev)}</td><td class="num-cell">${aiDeltaBadge(r.change??r.sessionsChange)}</td><td class="num-cell">${Number(r.engagementRate||0).toFixed(2)}%</td><td class="num-cell">${formatInt(r.conversions)}</td><td>${aiStatusBadge(r.status)}</td></tr>`).join(''):`<tr><td colspan="8" class="table-empty">No country data available.</td></tr>`;
 }
 
-function renderAiTrafficWarnings(report, traffic) {
-  const wrap=document.getElementById('aiTrafficWarnings');
-  if(!wrap)return;
-  const supportingWarnings=(report.warnings||[]).filter(item => /\b(ai|assistant|referral)\b/i.test(String(item)));
-  const warnings=[...(traffic.warnings||[]),...supportingWarnings].filter((v,i,a)=>v&&a.indexOf(v)===i);
-  if(!warnings.length){wrap.style.display='none';return;}
-  wrap.style.display='block';
-  wrap.innerHTML=`<div class="section-header"><div class="section-header-left"><span class="section-label">Data notes</span></div><span class="section-desc">AI referral tracking notes</span></div><div class="notice-stack">${warnings.map(w=>`<div class="data-note">${escHtml(w)}</div>`).join('')}</div>`;
+function renderAiTrafficWarnings() {
+  const wrap = document.getElementById('aiTrafficWarnings');
+  if (!wrap) return;
+  wrap.style.display = 'none';
+  wrap.innerHTML = '';
 }
 
 function aiSourceLabel(value) {

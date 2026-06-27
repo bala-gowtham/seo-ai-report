@@ -1,53 +1,63 @@
-# GSC and AI Traffic UI update
+# Premium dashboard and GA4 workspace update
 
-This version extends the existing single-page dashboard with two new left-navigation views:
+This release refreshes the existing single-page dashboard without changing the Netlify, n8n, cache, report-generation, or API contracts.
 
-- Google Search Console
-- AI Traffic
+## Premium visual system
 
-## New files
+- Apple-style system font stack with SF Pro, Inter, Geist, and Segoe UI fallbacks
+- Four interface accents only: blue, green, orange, and soft red
+- Soft-gray application canvas with refined white cards
+- Compact sidebar and sticky report toolbar
+- Subtle borders, restrained shadows, and consistent card radii
+- Improved KPI hierarchy, tables, filters, empty states, focus states, and responsive behavior
+- Updated Overview, GA4, Search Console, AI Traffic, AI Assistant, and export surfaces
 
-- `js/gsc.js`
-- `js/ai-traffic.js`
+## GA4 workspace
 
-## Updated files
+The long GA4 page is now a focused workspace with these tabs:
 
-- `index.html`
-- `css/layout.css`
-- `css/print.css`
-- `js/data.js`
-- `js/ui.js`
-- `js/ga4.js`
-- `js/charts.js`
-- `js/export.js`
-- `js/main.js`
+- Overview
+- Acquisition
+- Landing pages
+- Audience & devices
 
-## GSC view
+GA4 improvements include:
 
-- Eight KPI cards
-- Clicks, impressions, CTR, and position trend selector
-- Keyword position distribution
-- Search opportunity table
-- Query dataset tabs with search and pagination
-- Landing-page dataset tabs with search and pagination
-- Device, country, and search-appearance summaries
-- Page-query relationship table
-- Compact-cache and data-quality notices
+- Up to eight KPI cards when the payload provides the metrics
+- Current-versus-previous sessions chart
+- Dynamic, clickable medium selector
+- Clickable medium values inside the Source / Medium table
+- Medium-aware acquisition filtering
+- Selected-medium summary and clear-filter action
+- Searchable and sortable channel, source / medium, landing-page, and country tables
+- Previous and Next pagination
+- Rows-per-page selectors on the large acquisition and landing-page tables
+- Long-value truncation with full-value tooltips
+- Compact expandable GA4 data notes
+- An explicit note when the compact payload does not contain a landing-page-by-medium dimension
 
-## AI Traffic view
+The medium selector only filters datasets that contain a compatible medium or channel dimension. It does not fabricate medium-specific daily trends or landing-page attribution when those dimensions are absent from the compact payload.
 
-- Eight AI referral KPI cards
-- Daily trend normalized to include zero-traffic dates
-- AI source performance table
-- Landing-page table with lost/new states, search, and pagination
-- Device split
-- Country table
-- Small-sample notice
-- AI referral classification note
-- Supporting-data quality notice
+## Search Console
+
+- Existing GSC data, charts, tabs, search, and pagination are preserved
+- Coverage and row-limit messages are grouped into one compact expandable data-notes card
+- Property-level KPI messaging remains separate from dimension-level coverage limitations
+
+## AI Traffic
+
+- Existing AI referral KPIs, trends, source details, landing pages, devices, and countries are preserved
+- Small-sample, classification, and supporting-data notes are consolidated into one expandable information card
+- The note badge is generated from the actual AI session count
+
+## Responsive behavior
+
+- Desktop: compact fixed sidebar, multi-column KPI grids, and full tables
+- Tablet: reduced grids and collapsible navigation
+- Mobile: drawer navigation, stacked filters, two-column KPI cards where space permits, scrollable tables, and no page-level horizontal overflow
 
 ## Deployment
 
-Replace the GitHub repository files with this version and push to `main`. Netlify should deploy automatically.
+Push the repository contents to the GitHub `main` branch. Netlify should deploy automatically.
 
-No new Netlify environment variables are required for these UI views.
+No new environment variables or backend workflow changes are required.

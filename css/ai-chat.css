@@ -1,10 +1,10 @@
 .btn-refresh-data {
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid rgba(255, 107, 53, 0.35);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: 9px;
-  background: rgba(255, 107, 53, 0.08);
-  color: #ff6b35;
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
@@ -12,7 +12,7 @@
 }
 
 .btn-refresh-data:hover {
-  background: rgba(255, 107, 53, 0.14);
+  background: rgba(37, 99, 235, 0.14);
 }
 
 .btn-refresh-data:disabled {
@@ -58,7 +58,7 @@
   padding: 0 18px;
   border: 0;
   border-radius: 999px;
-  background: #ff6b35;
+  background: #2563eb;
   color: #fff;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.24);
   font: inherit;
@@ -164,7 +164,7 @@
 
 .ai-chat-message-user {
   margin-left: auto;
-  background: #ff6b35;
+  background: #2563eb;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -237,7 +237,7 @@
 
 .ai-chat-result-card {
   padding: 9px 10px;
-  border-left: 3px solid #ff6b35;
+  border-left: 3px solid #2563eb;
   border-radius: 7px;
   background: #f8fafc;
 }
@@ -328,7 +328,7 @@
   min-width: 70px;
   border: 0;
   border-radius: 10px;
-  background: #ff6b35;
+  background: #2563eb;
   color: #fff;
   font: inherit;
   font-weight: 800;

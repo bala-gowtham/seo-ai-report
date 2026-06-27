@@ -208,13 +208,13 @@ function renderGscMeta(report) {
 function renderGscKpis(kpis) {
   const defs = [
     ['gscClicks','Search Clicks','#22c55e'],
-    ['gscImpressions','Impressions','#3b82f6'],
-    ['avgCtr','Average CTR','#14b8a6'],
+    ['gscImpressions','Impressions','#2563eb'],
+    ['avgCtr','Average CTR','#22c55e'],
     ['avgPosition','Average Position','#f59e0b'],
-    ['keywordsTop3','Keywords Top 3','#8b5cf6'],
-    ['keywordsTop10','Keywords Top 10','#ff6b35'],
-    ['keywordsTop20','Keywords Top 20','#ec4899'],
-    ['opportunityCount','Opportunities','#ef4444']
+    ['keywordsTop3','Keywords Top 3','#f59e0b'],
+    ['keywordsTop10','Keywords Top 10','#2563eb'],
+    ['keywordsTop20','Keywords Top 20','#f87171'],
+    ['opportunityCount','Opportunities','#f87171']
   ];
   const wrap = document.getElementById('gscKpiStrip');
   if (!wrap) return;
@@ -257,8 +257,8 @@ function renderGscQualityNotice(report) {
 function gscMetricConfig(metric) {
   const configs = {
     clicks:{label:'Clicks',current:'clicks',previous:'prevClicks',color:'#22c55e',format:v=>Number(v).toLocaleString(),reverse:false},
-    impressions:{label:'Impressions',current:'impressions',previous:'prevImpressions',color:'#3b82f6',format:v=>fmtShort(Number(v)||0),reverse:false},
-    ctr:{label:'CTR',current:'ctr',previous:'prevCtr',color:'#14b8a6',format:v=>`${Number(v).toFixed(2)}%`,reverse:false},
+    impressions:{label:'Impressions',current:'impressions',previous:'prevImpressions',color:'#2563eb',format:v=>fmtShort(Number(v)||0),reverse:false},
+    ctr:{label:'CTR',current:'ctr',previous:'prevCtr',color:'#22c55e',format:v=>`${Number(v).toFixed(2)}%`,reverse:false},
     position:{label:'Average position',current:'position',previous:'prevPosition',color:'#f59e0b',format:v=>Number(v).toFixed(2),reverse:true}
   };
   return configs[metric] || configs.clicks;
@@ -289,7 +289,7 @@ function renderGscPositionChart(rows) {
   gscPositionChart = new Chart(canvas, {
     type:'bar',
     data:{labels:rows.map(r=>r.label),datasets:[
-      {label:'Current',data:rows.map(r=>Number(r.current||0)),backgroundColor:'rgba(139,92,246,.75)',borderRadius:5},
+      {label:'Current',data:rows.map(r=>Number(r.current||0)),backgroundColor:'rgba(245,158,11,.75)',borderRadius:5},
       {label:'Previous',data:rows.map(r=>Number(r.previous||0)),backgroundColor:'rgba(148,163,184,.35)',borderRadius:5}
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end'}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>fmtShort(v)}}}}
@@ -383,12 +383,23 @@ function renderGscPageQueryTable(report) {
 }
 
 function renderGscWarnings(report) {
-  const wrap=document.getElementById('gscWarnings');
+  const wrap = document.getElementById('gscWarnings');
   if (!wrap) return;
-  const warnings=[...(report.warnings||[]),...(report.gsc?.warnings||[])].filter((v,i,a)=>v&&a.indexOf(v)===i);
-  if (!warnings.length){wrap.style.display='none';return;}
-  wrap.style.display='block';
-  wrap.innerHTML=`<div class="section-header"><div class="section-header-left"><span class="section-label">Data notes</span></div><span class="section-desc">Coverage and collection notes · GSC</span></div><div class="notice-stack">${warnings.map(w=>`<div class="data-note">${escHtml(w)}</div>`).join('')}</div>`;
+  const warnings = [...(report.warnings || []), ...(report.gsc?.warnings || [])]
+    .filter((value, index, array) => value && array.indexOf(value) === index);
+  if (!warnings.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+  const limitCount = warnings.filter(item => /row limit|configured row limit|5000/i.test(String(item))).length;
+  const summary = limitCount
+    ? 'Some query and page-level datasets reached the collection limit. Overall property KPIs remain available, while detailed tables may represent a selected subset.'
+    : 'Search Console can return less complete dimension-level detail than property-level totals.';
+  wrap.innerHTML = `<details class="data-notes-card">
+    <summary><span class="data-notes-icon" aria-hidden="true">i</span><span><strong>Data notes</strong><small>Coverage and collection notes · GSC</small></span><span class="data-notes-badge">${warnings.length} coverage note${warnings.length === 1 ? '' : 's'}</span><span class="data-notes-chevron" aria-hidden="true"></span></summary>
+    <div class="data-notes-body"><p>${escHtml(summary)}</p><ul>${warnings.map(note => `<li>${escHtml(note)}</li>`).join('')}</ul></div>
+  </details>`;
 }
 
 function updateGscPager(id,page,totalPages,totalRows) {

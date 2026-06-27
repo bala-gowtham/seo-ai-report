@@ -89,7 +89,7 @@ body.dashboard-exporting .export-field-value {
   border-radius: 999px !important;
   background: #ffffff !important;
   color: #1a1d23 !important;
-  font-family: 'Inter', sans-serif !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Geist", "Segoe UI", sans-serif !important;
   font-size: 12px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.025) !important;
