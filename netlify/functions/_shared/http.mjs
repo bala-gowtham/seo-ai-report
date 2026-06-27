@@ -134,29 +134,14 @@ export function n8nUrl(pathOrUrl) {
 }
 
 export function n8nHeaders(requestId, additional = {}) {
-  const sharedSecret = stringValue(
-    process.env.SEO_REPORT_SHARED_SECRET,
-    2_000,
-  );
-
-  if (!sharedSecret) {
-    const error = new Error(
-      "SEO_REPORT_SHARED_SECRET is not configured in Netlify.",
-    );
-    error.code = "N8N_SHARED_SECRET_MISSING";
-    error.status = 500;
-    throw error;
-  }
-
-  const legacySecret = stringValue(process.env.N8N_PROXY_SECRET, 2_000);
+  const secret = process.env.SEO_REPORT_SHARED_SECRET;
 
   return {
     "content-type": "application/json",
     accept: "application/json",
     "x-request-id": requestId,
+    ...(secret ? { "x-seo-report-secret": secret } : {}),
     ...additional,
-    "x-seo-report-secret": sharedSecret,
-    ...(legacySecret ? { "x-seo-proxy-secret": legacySecret } : {}),
   };
 }
 
