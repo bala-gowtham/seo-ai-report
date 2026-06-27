@@ -154,14 +154,14 @@ function renderAiTrafficNotices(report, traffic) {
 
 function renderAiTrafficKpis(kpis) {
   const defs = [
-    ['sessions','AI Sessions','#f59e0b'],
-    ['users','Users','#2563eb'],
-    ['newUsers','New Users','#2563eb'],
-    ['engagedSessions','Engaged Sessions','#22c55e'],
+    ['sessions','AI Sessions','#8b5cf6'],
+    ['users','Users','#3b82f6'],
+    ['newUsers','New Users','#ff6b35'],
+    ['engagedSessions','Engaged Sessions','#14b8a6'],
     ['engagementRate','Engagement Rate','#22c55e'],
-    ['pageViews','Page Views','#f87171'],
+    ['pageViews','Page Views','#ec4899'],
     ['averageSessionDuration','Avg. Duration','#f59e0b'],
-    ['conversions','Conversions','#f87171']
+    ['conversions','Conversions','#ef4444']
   ];
   const wrap=document.getElementById('aiTrafficKpiStrip');
   if(!wrap)return;
@@ -188,7 +188,7 @@ function renderAiTrafficTrend(report, traffic) {
   aiTrafficTrendChart=new Chart(canvas,{
     type:'line',
     data:{labels,datasets:[
-      {label:'Current AI sessions',data:current.values,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.15)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3},
+      {label:'Current AI sessions',data:current.values,borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,.15)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3},
       {label:'Previous AI sessions',data:previous.values,borderColor:'#94a3b8',backgroundColor:'transparent',fill:false,tension:.3,borderWidth:1.5,borderDash:[5,4],pointRadius:2}
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end'}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{precision:0}}}}
@@ -255,7 +255,7 @@ function renderAiTrafficDeviceChart(rows) {
   if(aiTrafficDeviceChart)aiTrafficDeviceChart.destroy();
   aiTrafficDeviceChart=new Chart(canvas,{
     type:'doughnut',
-    data:{labels:(rows||[]).map(r=>r.name||r.device||'Unknown'),datasets:[{data:(rows||[]).map(r=>Number(r.sessions??r.value??0)),backgroundColor:['#f59e0b','#2563eb','#22c55e','#f59e0b'],borderWidth:0,hoverOffset:6}]},
+    data:{labels:(rows||[]).map(r=>r.name||r.device||'Unknown'),datasets:[{data:(rows||[]).map(r=>Number(r.sessions??r.value??0)),backgroundColor:['#8b5cf6','#3b82f6','#14b8a6','#f59e0b'],borderWidth:0,hoverOffset:6}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,padding:12}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${Number(ctx.raw||0).toLocaleString()} sessions`}}}}
   });
   const list=document.getElementById('aiDeviceDetailList');

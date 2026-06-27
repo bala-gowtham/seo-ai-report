@@ -6,10 +6,13 @@
 // ═══════════════════════════════════════════════════════════
 
 const GA4_ACCENTS = {
-  blue: '#2563eb',
+  blue: '#3b82f6',
   green: '#22c55e',
-  orange: '#f59e0b',
-  red: '#f87171',
+  orange: '#ff6b35',
+  red: '#ef4444',
+  violet: '#8b5cf6',
+  teal: '#14b8a6',
+  pink: '#ec4899',
   neutral: '#94a3b8'
 };
 
@@ -451,11 +454,11 @@ function renderGa4KpiStrip(kpis) {
     ['sessions', 'Sessions', GA4_ACCENTS.blue],
     ['totalUsers', 'Users', GA4_ACCENTS.green],
     ['newUsers', 'New users', GA4_ACCENTS.orange],
-    ['engagedSessions', 'Engaged sessions', GA4_ACCENTS.blue],
+    ['engagedSessions', 'Engaged sessions', GA4_ACCENTS.teal],
     ['engagementRate', 'Engagement rate', GA4_ACCENTS.green],
-    ['totalPageViews', 'Page views', GA4_ACCENTS.orange],
-    ['averageSessionDuration', 'Avg. duration', GA4_ACCENTS.blue],
-    ['conversions', 'Conversions', GA4_ACCENTS.green]
+    ['totalPageViews', 'Page views', GA4_ACCENTS.pink],
+    ['averageSessionDuration', 'Avg. duration', GA4_ACCENTS.violet],
+    ['conversions', 'Conversions', GA4_ACCENTS.red]
   ].filter(([key]) => kpis[key]?.available !== false && kpis[key]);
 
   const wrap = document.getElementById('ga4KpiStrip');

@@ -24,10 +24,17 @@ const gscViewState = {
   querySearch: '',
   pageSearch: '',
   pageQuerySearch: '',
+  opportunitySearch: '',
+  opportunityStatus: 'all',
+  countrySearch: '',
   queryPage: 1,
   pagePage: 1,
   pageQueryPage: 1,
+  opportunityPage: 1,
+  countryPage: 1,
   pageSize: 10,
+  countryPageSize: 5,
+  opportunityPageSize: 10,
   trendMetric: 'clicks',
   initialized: false
 };
@@ -146,6 +153,21 @@ function initGscView() {
   bindGscPager('gscQueryPrev','gscQueryNext','queryPage',()=>renderGscQueryTable(currentGscReport));
   bindGscPager('gscPagePrev','gscPageNext','pagePage',()=>renderGscPageTable(currentGscReport));
   bindGscPager('gscPageQueryPrev','gscPageQueryNext','pageQueryPage',()=>renderGscPageQueryTable(currentGscReport));
+  bindGscSearch('gscOpportunitySearch', 'opportunitySearch', () => {
+    gscViewState.opportunityPage = 1;
+    renderGscOpportunityTable(currentGscReport?.gsc?.opportunities || currentGscReport?.gsc?.opportunityQueries || []);
+  });
+  document.getElementById('gscOpportunityStatus')?.addEventListener('change', event => {
+    gscViewState.opportunityStatus = event.target.value || 'all';
+    gscViewState.opportunityPage = 1;
+    renderGscOpportunityTable(currentGscReport?.gsc?.opportunities || currentGscReport?.gsc?.opportunityQueries || []);
+  });
+  bindGscPager('gscOpportunityPrev','gscOpportunityNext','opportunityPage',()=>renderGscOpportunityTable(currentGscReport?.gsc?.opportunities || currentGscReport?.gsc?.opportunityQueries || []));
+  bindGscSearch('gscCountrySearch', 'countrySearch', () => {
+    gscViewState.countryPage = 1;
+    renderGscCountries(currentGscReport?.gsc?.countries || []);
+  });
+  bindGscPager('gscCountryPrev','gscCountryNext','countryPage',()=>renderGscCountries(currentGscReport?.gsc?.countries || []));
 }
 
 function bindGscSearch(id, stateKey, callback) {
@@ -208,13 +230,13 @@ function renderGscMeta(report) {
 function renderGscKpis(kpis) {
   const defs = [
     ['gscClicks','Search Clicks','#22c55e'],
-    ['gscImpressions','Impressions','#2563eb'],
-    ['avgCtr','Average CTR','#22c55e'],
+    ['gscImpressions','Impressions','#3b82f6'],
+    ['avgCtr','Average CTR','#14b8a6'],
     ['avgPosition','Average Position','#f59e0b'],
-    ['keywordsTop3','Keywords Top 3','#f59e0b'],
-    ['keywordsTop10','Keywords Top 10','#2563eb'],
-    ['keywordsTop20','Keywords Top 20','#f87171'],
-    ['opportunityCount','Opportunities','#f87171']
+    ['keywordsTop3','Keywords Top 3','#8b5cf6'],
+    ['keywordsTop10','Keywords Top 10','#ff6b35'],
+    ['keywordsTop20','Keywords Top 20','#ec4899'],
+    ['opportunityCount','Opportunities','#ef4444']
   ];
   const wrap = document.getElementById('gscKpiStrip');
   if (!wrap) return;
@@ -257,8 +279,8 @@ function renderGscQualityNotice(report) {
 function gscMetricConfig(metric) {
   const configs = {
     clicks:{label:'Clicks',current:'clicks',previous:'prevClicks',color:'#22c55e',format:v=>Number(v).toLocaleString(),reverse:false},
-    impressions:{label:'Impressions',current:'impressions',previous:'prevImpressions',color:'#2563eb',format:v=>fmtShort(Number(v)||0),reverse:false},
-    ctr:{label:'CTR',current:'ctr',previous:'prevCtr',color:'#22c55e',format:v=>`${Number(v).toFixed(2)}%`,reverse:false},
+    impressions:{label:'Impressions',current:'impressions',previous:'prevImpressions',color:'#3b82f6',format:v=>fmtShort(Number(v)||0),reverse:false},
+    ctr:{label:'CTR',current:'ctr',previous:'prevCtr',color:'#14b8a6',format:v=>`${Number(v).toFixed(2)}%`,reverse:false},
     position:{label:'Average position',current:'position',previous:'prevPosition',color:'#f59e0b',format:v=>Number(v).toFixed(2),reverse:true}
   };
   return configs[metric] || configs.clicks;
@@ -289,7 +311,7 @@ function renderGscPositionChart(rows) {
   gscPositionChart = new Chart(canvas, {
     type:'bar',
     data:{labels:rows.map(r=>r.label),datasets:[
-      {label:'Current',data:rows.map(r=>Number(r.current||0)),backgroundColor:'rgba(245,158,11,.75)',borderRadius:5},
+      {label:'Current',data:rows.map(r=>Number(r.current||0)),backgroundColor:'rgba(139,92,246,.75)',borderRadius:5},
       {label:'Previous',data:rows.map(r=>Number(r.previous||0)),backgroundColor:'rgba(148,163,184,.35)',borderRadius:5}
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end'}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{beginAtZero:true,grid:{color:'rgba(0,0,0,.04)'},ticks:{callback:v=>fmtShort(v)}}}}
@@ -299,14 +321,26 @@ function renderGscPositionChart(rows) {
 function renderGscOpportunityTable(rows) {
   const tbody = document.getElementById('gscOpportunityTableBody');
   if (!tbody) return;
-  const items = (rows || []).slice(0,15);
+  const search = gscViewState.opportunitySearch;
+  const status = gscViewState.opportunityStatus;
+  const filtered = (rows || []).filter(row => {
+    const label = String(row.query || row.name || '').toLowerCase();
+    const rowStatus = String(row.status || 'stable').toLowerCase();
+    return label.includes(search) && (status === 'all' || rowStatus === status);
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / gscViewState.opportunityPageSize));
+  const page = Math.min(gscViewState.opportunityPage, totalPages);
+  gscViewState.opportunityPage = page;
+  const start = (page - 1) * gscViewState.opportunityPageSize;
+  const items = filtered.slice(start, start + gscViewState.opportunityPageSize);
   tbody.innerHTML = items.length ? items.map((r,i)=>`<tr>
-    <td class="row-num">${i+1}</td><td class="primary-cell table-text-wrap">${escHtml(r.query||r.name||'')}</td>
+    <td class="row-num">${start+i+1}</td><td class="primary-cell table-text-wrap">${escHtml(r.query||r.name||'')}</td>
     <td class="num-cell"><strong>${formatValue(r.opportunityScore)}</strong></td>
     <td class="num-cell">${formatInt(r.impressions)}</td><td class="num-cell">${formatInt(r.clicks)}</td>
     <td class="num-cell">${Number(r.ctr||0).toFixed(2)}%</td><td class="num-cell">${Number(r.position||0).toFixed(2)}</td>
     <td class="num-cell">${gscDeltaBadge(r.positionChange,true)}</td><td>${gscStatusBadge(r.status)}</td>
-  </tr>`).join('') : gscEmptyRow(9,'No search opportunities available.');
+  </tr>`).join('') : gscEmptyRow(9,'No search opportunities match these filters.');
+  updateGscPager('gscOpportunityPager', page, totalPages, filtered.length);
 }
 
 function renderGscQueryTable(report) {
@@ -348,18 +382,29 @@ function renderGscEntityRows(tbodyId, rows, type, requestedPage, pagerId, stateK
 function renderGscBreakdowns(report) {
   const gsc = report?.gsc || {};
   renderGscCompactTable('gscDeviceTableBody',gsc.devices||[],'device');
-  renderGscCompactTable('gscCountryTableBody',gsc.countries||[],'country');
-  const appearance = document.getElementById('gscAppearanceSummary');
-  if (appearance) {
-    const rows = gsc.searchAppearance || [];
-    appearance.innerHTML = rows.length ? rows.map(r=>`<div class="metric-summary-row"><span>${escHtml(r.name||r.searchAppearance||'Unknown')}</span><strong>${formatInt(r.clicks)} clicks</strong></div>`).join('') : '<div class="empty-inline">No search appearance split returned.</div>';
-  }
+  renderGscCountries(gsc.countries || []);
+}
+
+function renderGscCountries(rows) {
+  const tbody = document.getElementById('gscCountryTableBody');
+  if (!tbody) return;
+  const filtered = (rows || []).filter(row => gscCountryName(row.name || row.country || '').toLowerCase().includes(gscViewState.countrySearch));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / gscViewState.countryPageSize));
+  const page = Math.min(gscViewState.countryPage, totalPages);
+  gscViewState.countryPage = page;
+  const start = (page - 1) * gscViewState.countryPageSize;
+  const items = filtered.slice(start, start + gscViewState.countryPageSize);
+  tbody.innerHTML = items.length ? items.map((r,i)=>{
+    const label = gscCountryName(r.name || r.country || 'Unknown');
+    return `<tr><td class="row-num">${start+i+1}</td><td class="primary-cell">${escHtml(label)}</td><td class="num-cell">${formatInt(r.clicks)}</td><td class="num-cell">${formatInt(r.impressions)}</td><td class="num-cell">${Number(r.ctr||0).toFixed(2)}%</td><td class="num-cell">${Number(r.position||0).toFixed(2)}</td><td>${gscStatusBadge(r.status)}</td></tr>`;
+  }).join('') : gscEmptyRow(7,'No countries match this search.');
+  updateGscPager('gscCountryPager', page, totalPages, filtered.length);
 }
 
 function renderGscCompactTable(tbodyId, rows, type) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  const items = (rows||[]).slice(0,type==='country'?12:10);
+  const items = (rows||[]).slice(0,10);
   tbody.innerHTML = items.length ? items.map((r,i)=>{
     const raw = r.name || r[type] || 'Unknown';
     const label = type === 'country' ? gscCountryName(raw) : String(raw).replace(/^./,m=>m.toUpperCase());

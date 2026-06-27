@@ -89,7 +89,7 @@ body.dashboard-exporting .export-field-value {
   border-radius: 999px !important;
   background: #ffffff !important;
   color: #1a1d23 !important;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Geist", "Segoe UI", sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 12px rgba(0,0,0,0.025) !important;
@@ -175,3 +175,8 @@ body.dashboard-exporting .chart-canvas-medium {
 body.dashboard-exporting .report-kpi-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
 }
+
+
+/* Interactive assistant is excluded from exported reports. */
+body.dashboard-exporting .overview-ai-card { display: none !important; }
+body.dashboard-exporting .overview-summary-row { grid-template-columns: repeat(2, minmax(0,1fr)) !important; }

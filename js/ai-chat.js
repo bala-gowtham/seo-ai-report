@@ -568,6 +568,29 @@
     launch.addEventListener("click", () => setOpen(!state.open));
     close.addEventListener("click", () => setOpen(false));
 
+    const overviewOpen = document.getElementById("overviewAiOpen");
+    const overviewOrb = document.getElementById("overviewAiOrb");
+    const overviewForm = document.getElementById("overviewAiForm");
+    const overviewPrompt = document.getElementById("overviewAiPrompt");
+
+    function openFromOverview(question = "") {
+      setOpen(true);
+      contextSelect.value = "auto";
+      if (question) textarea.value = question;
+    }
+
+    overviewOpen?.addEventListener("click", () => openFromOverview());
+    overviewOrb?.addEventListener("click", () => openFromOverview());
+    overviewForm?.addEventListener("submit", event => {
+      event.preventDefault();
+      const question = overviewPrompt?.value?.trim() || "";
+      openFromOverview(question);
+      if (question.length >= 3) {
+        overviewPrompt.value = "";
+        form.requestSubmit();
+      }
+    });
+
     clear.addEventListener("click", () => {
       state.conversation = [];
       messages.textContent = "";

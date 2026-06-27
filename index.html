@@ -6,7 +6,7 @@
   <title>SEO Overview Dashboard</title>
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/ai-chat.css" />
-  <link rel="stylesheet" href="css/premium-theme.css" />
+  <link rel="stylesheet" href="css/classic-enhancements.css" />
   <link rel="stylesheet" href="css/print.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -33,9 +33,9 @@
   <aside class="sidebar" id="primarySidebar" aria-label="Primary navigation">
     <div class="logo">
       <svg class="logo-mark-svg" viewBox="0 0 34 34" fill="none" aria-label="SEO Intel" xmlns="http://www.w3.org/2000/svg">
-        <rect width="34" height="34" rx="8" fill="#2563eb"/>
+        <rect width="34" height="34" rx="8" fill="#ff6b35"/>
         <path d="M8 17 Q17 8 26 17 Q17 26 8 17Z" fill="white" opacity="0.9"/>
-        <circle cx="17" cy="17" r="4" fill="#2563eb"/>
+        <circle cx="17" cy="17" r="4" fill="#ff6b35"/>
       </svg>
       <div class="logo-text">SEO Intel</div>
       <div class="logo-sub">Overview</div>
@@ -139,25 +139,25 @@
         <span class="section-desc">Current period vs previous period</span>
       </div>
       <section class="kpi-grid" aria-label="KPI summary">
-        <div class="kpi-card" style="--card-color:#2563eb">
+        <div class="kpi-card" style="--card-color:#ff6b35">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Total Users</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="totalUsers">—</div>
           <div class="kpi-change" data-kpi-change="totalUsers">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#f59e0b">
+        <div class="kpi-card" style="--card-color:#ff9a6b">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Total Page Views</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="totalPageViews">—</div>
           <div class="kpi-change" data-kpi-change="totalPageViews">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#f87171">
+        <div class="kpi-card" style="--card-color:#ec4899">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Total Conversions</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="conversions">—</div>
           <div class="kpi-change" data-kpi-change="conversions">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#f59e0b">
+        <div class="kpi-card" style="--card-color:#8b5cf6">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Total AI Traffic</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="aiTraffic">—</div>
@@ -169,13 +169,13 @@
           <div class="kpi-value" data-kpi="gscClicks">—</div>
           <div class="kpi-change" data-kpi-change="gscClicks">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#2563eb">
+        <div class="kpi-card" style="--card-color:#3b82f6">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Search Impressions</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="gscImpressions">—</div>
           <div class="kpi-change" data-kpi-change="gscImpressions">—</div>
         </div>
-        <div class="kpi-card" style="--card-color:#22c55e">
+        <div class="kpi-card" style="--card-color:#14b8a6">
           <div class="kpi-glow"></div>
           <div class="kpi-top"><div class="kpi-label">Average CTR</div><div class="kpi-dot"></div></div>
           <div class="kpi-value" data-kpi="avgCtr">—</div>
@@ -210,8 +210,8 @@
         </div>
       </section>
 
-      <!-- ── Row 2: Device Split · Traffic by Channel · Top Landing Pages (3-col) ── -->
-      <section class="charts-row charts-row-third">
+      <!-- ── Row 2: Device Split · Traffic by Channel · AI Assistant (3-col) ── -->
+      <section class="charts-row charts-row-third overview-summary-row">
         <div class="chart-card">
           <div class="chart-header">
             <div>
@@ -232,15 +232,22 @@
           </div>
           <canvas id="chanChart" style="max-height:210px"></canvas>
         </div>
-        <div class="chart-card">
+        <div class="chart-card overview-ai-card" id="overviewAiAssistantCard">
           <div class="chart-header">
             <div>
-              <div class="chart-title">Top Landing Pages</div>
-              <div class="chart-subtitle">Organic entry pages by sessions · GA4</div>
+              <div class="chart-title">AI Assistant</div>
+              <div class="chart-subtitle">Ask a question about the selected report</div>
             </div>
-            <span class="tag tag-sky">GA4</span>
+            <button class="overview-ai-expand" id="overviewAiOpen" type="button" aria-label="Open AI Assistant">↗</button>
           </div>
-          <div id="landingPageBars" class="metric-list compact-list"></div>
+          <button class="overview-ai-orb" id="overviewAiOrb" type="button" aria-label="Open AI Assistant">
+            <span class="overview-ai-orb-core"></span>
+          </button>
+          <form class="overview-ai-form" id="overviewAiForm">
+            <span class="overview-ai-attach" aria-hidden="true">⌕</span>
+            <input id="overviewAiPrompt" type="text" maxlength="2000" placeholder="Ask me anything…" aria-label="Question for AI Assistant" />
+            <button type="submit" aria-label="Send to AI Assistant">↑</button>
+          </form>
         </div>
       </section>
 
@@ -260,8 +267,8 @@
               <div class="chart-subtitle">Daily trend · Google Search Console</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <div class="legend-item"><span class="legend-dot" style="background:#2563eb"></span>Clicks</div>
-              <div class="legend-item"><span class="legend-dot" style="background:rgba(37,99,235,0.3)"></span>Impressions</div>
+              <div class="legend-item"><span class="legend-dot" style="background:#ff6b35"></span>Clicks</div>
+              <div class="legend-item"><span class="legend-dot" style="background:rgba(255,107,53,0.3)"></span>Impressions</div>
               <span class="tag tag-teal">GSC</span>
             </div>
           </div>
@@ -560,7 +567,21 @@
         <span class="section-desc">High-impression queries with room to improve</span>
       </div>
       <section class="chart-card chart-card-full report-section-card">
+        <div class="table-toolbar">
+          <input id="gscOpportunitySearch" class="table-search" type="search" placeholder="Search opportunities" aria-label="Search GSC opportunities" />
+          <label class="rows-control">Status
+            <select id="gscOpportunityStatus" class="table-page-size" aria-label="Filter opportunities by status">
+              <option value="all">All</option>
+              <option value="growing">Growing</option>
+              <option value="stable">Stable</option>
+              <option value="declining">Declining</option>
+              <option value="new">New</option>
+              <option value="lost">Lost</option>
+            </select>
+          </label>
+        </div>
         <div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Query</th><th style="text-align:right">Score</th><th style="text-align:right">Impressions</th><th style="text-align:right">Clicks</th><th style="text-align:right">CTR</th><th style="text-align:right">Position</th><th style="text-align:right">Position Δ</th><th>Status</th></tr></thead><tbody id="gscOpportunityTableBody"></tbody></table></div>
+        <div class="table-pager" id="gscOpportunityPager"><button id="gscOpportunityPrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscOpportunityNext" data-page-next type="button">Next</button></div>
       </section>
 
       <div class="section-header">
@@ -594,11 +615,14 @@
         <div class="table-pager" id="gscPagePager"><button id="gscPagePrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscPageNext" data-page-next type="button">Next</button></div>
       </section>
 
-      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="section-label">Audience &amp; Search Features</span></div><span class="section-desc">Device, country, and appearance breakdowns</span></div>
-      <section class="charts-row charts-row-third report-chart-row">
+      <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10 15.3 15.3 0 0 1 4-10z"/></svg><span class="section-label">Audience &amp; Geography</span></div><span class="section-desc">Device and country search visibility</span></div>
+      <section class="charts-row charts-row-equal report-chart-row">
         <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Devices</div><div class="chart-subtitle">Search performance by device</div></div><span class="tag tag-teal">GSC</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Device</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impr.</th><th style="text-align:right">CTR</th><th style="text-align:right">Pos.</th><th>Status</th></tr></thead><tbody id="gscDeviceTableBody"></tbody></table></div></div>
-        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Top Countries</div><div class="chart-subtitle">Search visibility by country</div></div><span class="tag tag-sky">GSC</span></div><div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Country</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impr.</th><th style="text-align:right">CTR</th><th style="text-align:right">Pos.</th><th>Status</th></tr></thead><tbody id="gscCountryTableBody"></tbody></table></div></div>
-        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Search Appearance</div><div class="chart-subtitle">Google result feature categories</div></div><span class="tag tag-amber">GSC</span></div><div id="gscAppearanceSummary" class="metric-summary-list"></div></div>
+        <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Top Countries</div><div class="chart-subtitle">Five countries per page · search visibility</div></div><span class="tag tag-sky">GSC</span></div>
+          <div class="table-toolbar compact-country-toolbar"><input id="gscCountrySearch" class="table-search" type="search" placeholder="Search countries" aria-label="Search GSC countries" /></div>
+          <div class="table-scroll"><table class="data-table"><thead><tr><th>#</th><th>Country</th><th style="text-align:right">Clicks</th><th style="text-align:right">Impr.</th><th style="text-align:right">CTR</th><th style="text-align:right">Pos.</th><th>Status</th></tr></thead><tbody id="gscCountryTableBody"></tbody></table></div>
+          <div class="table-pager" id="gscCountryPager"><button id="gscCountryPrev" data-page-prev type="button">Previous</button><span data-page-status></span><button id="gscCountryNext" data-page-next type="button">Next</button></div>
+        </div>
       </section>
 
       <div class="section-header"><div class="section-header-left"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg><span class="section-label">Page to Query Relationships</span></div><span class="section-desc">Which queries are driving each landing page</span></div>

@@ -1,32 +1,32 @@
 let chartInstances = {};
 
 const chartColors = {
-  orange:  '#2563eb',
-  peach:   '#f59e0b',
+  orange:  '#ff6b35',
+  peach:   '#ff9a6b',
   amber:   '#f59e0b',
-  rose:    '#f87171',
-  sky:     '#2563eb',
-  violet:  '#f59e0b',
-  teal:    '#22c55e',
+  rose:    '#ef4444',
+  sky:     '#3b82f6',
+  violet:  '#8b5cf6',
+  teal:    '#14b8a6',
   green:   '#22c55e',
-  purple:  '#2563eb',
-  pink:    '#f87171',
+  purple:  '#c084fc',
+  pink:    '#ec4899',
   grid:    'rgba(0,0,0,0.04)',
   border:  'rgba(0,0,0,0.05)'
 };
 
 const CHANNEL_COLORS = [
-  'rgba(37,99,235,0.85)',
-  'rgba(37,99,235,0.8)',
+  'rgba(255,107,53,0.85)',
+  'rgba(59,130,246,0.8)',
+  'rgba(139,92,246,0.8)',
+  'rgba(20,184,166,0.8)',
   'rgba(245,158,11,0.8)',
-  'rgba(34,197,94,0.8)',
-  'rgba(245,158,11,0.8)',
-  'rgba(248,113,113,0.8)',
+  'rgba(236,72,153,0.8)',
   'rgba(34,197,94,0.8)'
 ];
 
 const AEO_COLORS = [
-  '#f59e0b','#2563eb','#2563eb','#22c55e','#f59e0b','#f87171'
+  '#8b5cf6','#ff6b35','#3b82f6','#14b8a6','#f59e0b','#ec4899'
 ];
 
 function fmtK(v) {
@@ -37,7 +37,7 @@ function fmtK(v) {
 
 function initChartDefaults() {
   Chart.defaults.color = '#9ca3af';
-  Chart.defaults.font  = { family: '-apple-system, BlinkMacSystemFont, \"SF Pro Text\", Inter, Geist, Segoe UI, sans-serif', size: 11 };
+  Chart.defaults.font  = { family: 'Inter', size: 11 };
 }
 
 function createCharts() {
@@ -56,12 +56,12 @@ function createSessionsChart() {
   const ctx = canvas.getContext('2d');
 
   const g1 = ctx.createLinearGradient(0,0,0,220);
-  g1.addColorStop(0, 'rgba(37,99,235,0.15)');
-  g1.addColorStop(1, 'rgba(37,99,235,0)');
+  g1.addColorStop(0, 'rgba(255,107,53,0.15)');
+  g1.addColorStop(1, 'rgba(255,107,53,0)');
 
   const g2 = ctx.createLinearGradient(0,0,0,220);
-  g2.addColorStop(0, 'rgba(37,99,235,0.1)');
-  g2.addColorStop(1, 'rgba(37,99,235,0)');
+  g2.addColorStop(0, 'rgba(59,130,246,0.1)');
+  g2.addColorStop(1, 'rgba(59,130,246,0)');
 
   return new Chart(ctx, {
     type: 'line',
@@ -171,7 +171,7 @@ function createGscChart() {
         {
           label: 'Impressions',
           data: [],
-          backgroundColor: 'rgba(37,99,235,0.18)',
+          backgroundColor: 'rgba(255,107,53,0.18)',
           borderRadius: 4, borderSkipped: false,
           yAxisID: 'y'
         },
@@ -219,7 +219,7 @@ function createAeoChart() {
       ctx.save();
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font         = '12px -apple-system, BlinkMacSystemFont, \"SF Pro Text\", Inter, Geist, Segoe UI, sans-serif';
+      ctx.font         = '12px Inter, sans-serif';
       ctx.fillStyle    = '#9ca3af';
       const cx = (chartArea.left + chartArea.right) / 2;
       const cy = (chartArea.top  + chartArea.bottom) / 2;
@@ -324,7 +324,7 @@ function tooltipOptions() {
     titleColor: '#1a1d23',
     bodyColor: '#6b7280',
     titleFont: { family: 'Space Grotesk', size: 12, weight: '600' },
-    bodyFont:  { family: '-apple-system, BlinkMacSystemFont, \"SF Pro Text\", Inter, Geist, Segoe UI, sans-serif', size: 11 }
+    bodyFont:  { family: 'Inter', size: 11 }
   };
 }
 

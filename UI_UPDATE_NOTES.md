@@ -61,3 +61,12 @@ The medium selector only filters datasets that contain a compatible medium or ch
 Push the repository contents to the GitHub `main` branch. Netlify should deploy automatically.
 
 No new environment variables or backend workflow changes are required.
+
+
+## Classic theme usability update
+- Restored the original SEO Intel visual design and colour palette.
+- Preserved GA4 tabs, medium filtering, search, sorting, and pagination.
+- Replaced the Overview landing-page card with an embedded AI Assistant launcher.
+- Removed GSC Search Appearance from the interface.
+- Added GSC opportunity search/status filtering and pagination.
+- Limited GSC country results to five rows per page with search and Previous/Next navigation.
